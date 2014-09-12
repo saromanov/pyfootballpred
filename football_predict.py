@@ -180,10 +180,27 @@ class OptimalTeam:
 			Брать во внимание уровень нападающих в команде соперников
 		'''
 		positions = self._getDefences(num)
-		for pos in positions:
+		print(team)
+		center = self._chooseDefenceCenter(team)
+		print(center)
+		'''for pos in positions:
 			players = list(getPlayersFromTeamByPos(self.teamdata, team, pos))
 			vecparams = list(map(lambda x: [x['AerialWon']], players))
-			break
+			break'''
+
+	def _chooseDefenceCenter(self, team):
+		players = list(getPlayersFromTeamByPos(self.teamdata, team, 'D(C)'))
+		tomaxvalues = list(map(lambda x: [x['TotalTackles'], x['AerialWon'],\
+			x['Rating'], x['OffsidesWon'], x['GameStarted'], x['ShotsBlocked'],
+			x['LastName']],players))
+		tominvalues = list(map(lambda x: [x['AerialLost'], x['Dispossesed'],\
+			x['Yellow']], players))
+		maxv = self._optimalPlayers(np.array(tomaxvalues), np.argmax, 2, players)
+		minv = self._optimalPlayers(np.array(tominvalues), np.argmin, 2, players)
+
+	def _optimalPlayers(self, matr, func, num, players):
+		c = Counter(func(matr, axis=0)).most_common(num)
+		return list(map(lambda x: players[x[0]]['LastName'], c))
 
 	def _getDefences(self, num):
 		if num <= 2:
@@ -203,6 +220,8 @@ class Statistics:
 	def compare(self, first, second):
 		'''
 			Compare some two parameters
+			st = Statistics(teams)
+			st.compare('Height', 'AerialWon')
 		'''
 		bans = self.teamdata
 		keys = list(self.teamdata.keys())
