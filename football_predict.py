@@ -80,6 +80,16 @@ def parseOnlineTextMatch(url):
 	pass
 
 
+#http://www.whoscored.com/Teams/32/Fixtures/England-Manchester-United
+
+#Распарсить Лайв матча
+#http://www.whoscored.com/Matches/713513/Live
+
+#Рассчёт стабильности игрока
+#ПОиск похожих игроков(на основе статистики)
+
+#Наверное лучшие использовать гравовую базу данных
+
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
 	startstat = data.find('defaultWsPlayerStatsConfigParams.defaultParams')+49
@@ -165,12 +175,14 @@ class OptimalTeam:
 		GK = self._chooseGK(opteam)
 		self._chooseDefence(team, opteam, form_res[0])
 
+	def _getParamValues(self, players, values):
+		return list(map(lambda x: [x[p] for p in values], players))
+
 	def _chooseGK(self, team):
 		pos = 'GK'
 		players = list(getPlayersFromTeamByPos(self.teamdata, team, 'GK'))
 		params = ['TotalClearances', 'Rating', 'GameStarted', 'ManOfTheMatch', 'AerialWon']
-		vecparams = list(map(lambda x: [x['TotalClearances'], x['Rating'], x['GameStarted'], \
-			x['ManOfTheMatch'], x['AerialWon']], players))
+		vecparams = self._getParamValues(players, params)
 		matr = np.array(vecparams)
 		c = Counter(np.argmax(matr, axis=0)).most_common(1).pop()
 		return players[c[0]]['LastName']
@@ -180,27 +192,36 @@ class OptimalTeam:
 			Брать во внимание уровень нападающих в команде соперников
 		'''
 		positions = self._getDefences(num)
-		print(team)
-		center = self._chooseDefenceCenter(team)
-		print(center)
+		center = self._chooseDefenceCenter(team, opteam)
 		'''for pos in positions:
 			players = list(getPlayersFromTeamByPos(self.teamdata, team, pos))
 			vecparams = list(map(lambda x: [x['AerialWon']], players))
 			break'''
 
-	def _chooseDefenceCenter(self, team):
+	def _chooseDefenceCenter(self, team, opteam):
 		players = list(getPlayersFromTeamByPos(self.teamdata, team, 'D(C)'))
-		tomaxvalues = list(map(lambda x: [x['TotalTackles'], x['AerialWon'],\
-			x['Rating'], x['OffsidesWon'], x['GameStarted'], x['ShotsBlocked'],
-			x['LastName']],players))
-		tominvalues = list(map(lambda x: [x['AerialLost'], x['Dispossesed'],\
-			x['Yellow']], players))
+		params = ['TotalTackles', 'AerialWon', 'Rating','OffsidesWon','GameStarted',\
+		 'ShotsBlocked', 'LastName']
+		tomaxvalues = self._getParamValues(players, params)
+		tominvalues = self._getParamValues(players,['AerialLost','Dispossesed','Yellow'])
 		maxv = self._optimalPlayers(np.array(tomaxvalues), np.argmax, 2, players)
 		minv = self._optimalPlayers(np.array(tominvalues), np.argmin, 2, players)
+		#if same players both in maxv and minv append in result list
+		data = list(maxv.intersection(minv))
+		print(data)
+		self._opteamOptimal(['Dribbles', 'TotalShots', 'Goals'], opteam)
+		if len(data) == 2:
+			return data
+
+
 
 	def _optimalPlayers(self, matr, func, num, players):
 		c = Counter(func(matr, axis=0)).most_common(num)
-		return list(map(lambda x: players[x[0]]['LastName'], c))
+		return set(map(lambda x: players[x[0]]['LastName'], c))
+
+	def _opteamOptimal(self, params, opteam):
+		values = self._getParamValues(list(getPlayersFromTeamByPos(self.teamdata, opteam, 'FW'))\
+			, params)
 
 	def _getDefences(self, num):
 		if num <= 2:
@@ -243,3 +264,18 @@ def GkToForward(player, gk):
 	if gk[0] == 0:
 		return 0
 	return player[0]/gk[0]
+
+#Показывать позицию игрока в оющем рейтинге, например 26 в рейтинге тех кто
+#больше всего фолит
+
+manage = ManageData(path='../teams')
+teams = manage.data['teams']
+
+#print(list(map(lambda x: (x['PositionShort'], x['LastName']), teams['Chelsea'])))
+#opteam = OptimalTeam(teams, 'Arsenal', 'Chelsea')
+#print(getBest(teams, 'Fouls'))
+#getPlayersFromTeamByPos(teams, 'Liverpool', 'D(C)')
+#print(getPos(getBest(teams, 'Fouls'), 'Rooney'))
+
+opt = OptimalTeam(teams)
+opt.getOptimalTeam('Arsenal', 'Chelsea', '4-4-2')
