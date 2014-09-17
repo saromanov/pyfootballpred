@@ -2,7 +2,7 @@ import numpy as np
 import urllib.request
 import json
 import itertools
-from collections import Counter
+from collections import Counter, namedtuple
 import itertools
 
 #Only for English Premier League
@@ -79,16 +79,6 @@ def parseOnlineTextMatch(url):
 	'''
 	pass
 
-
-#http://www.whoscored.com/Teams/32/Fixtures/England-Manchester-United
-
-#Распарсить Лайв матча
-#http://www.whoscored.com/Matches/713513/Live
-
-#Рассчёт стабильности игрока
-#ПОиск похожих игроков(на основе статистики)
-
-#Наверное лучшие использовать гравовую базу данных
 
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
@@ -180,7 +170,7 @@ class OptimalTeam:
 
 	def _chooseGK(self, team):
 		pos = 'GK'
-		players = list(getPlayersFromTeamByPos(self.teamdata, team, 'GK'))
+		players = list(getPlayersFromTeamByPos(self.teamdata, team, pos))
 		params = ['TotalClearances', 'Rating', 'GameStarted', 'ManOfTheMatch', 'AerialWon']
 		vecparams = self._getParamValues(players, params)
 		matr = np.array(vecparams)
@@ -208,8 +198,9 @@ class OptimalTeam:
 		minv = self._optimalPlayers(np.array(tominvalues), np.argmin, 2, players)
 		#if same players both in maxv and minv append in result list
 		data = list(maxv.intersection(minv))
-		print(data)
-		self._opteamOptimal(['Dribbles', 'TotalShots', 'Goals'], opteam)
+		self._opteamOptimal({'Dribbles': ['WasDribbled'], \
+			'TotalShots': ['ShotsBlocked'], 'Goals':['ShotsBlocked']}, \
+			opteam, players)
 		if len(data) == 2:
 			return data
 
@@ -219,9 +210,20 @@ class OptimalTeam:
 		c = Counter(func(matr, axis=0)).most_common(num)
 		return set(map(lambda x: players[x[0]]['LastName'], c))
 
-	def _opteamOptimal(self, params, opteam):
-		values = self._getParamValues(list(getPlayersFromTeamByPos(self.teamdata, opteam, 'FW'))\
-			, params)
+	def _opteamOptimal(self, params, opteam, teamdata):
+		'''
+			Best players from opposite team
+		'''
+		opplayers = list(getPlayersFromTeamByPos(self.teamdata, opteam, 'FW'))
+		#values = list(filter(lambda x: x[-1:][0] > 0, self._getParamValues(opplayers, params)))
+		print(teamdata[0]['WasDribbled'])
+		for v in params.keys():
+			for player in teamdata:
+				preresult = list(
+					filter(lambda x: x > 0, \
+					map(lambda x: player[x], params[v]))
+					)
+				print(preresult)
 
 	def _getDefences(self, num):
 		if num <= 2:
@@ -264,18 +266,3 @@ def GkToForward(player, gk):
 	if gk[0] == 0:
 		return 0
 	return player[0]/gk[0]
-
-#Показывать позицию игрока в оющем рейтинге, например 26 в рейтинге тех кто
-#больше всего фолит
-
-manage = ManageData(path='../teams')
-teams = manage.data['teams']
-
-#print(list(map(lambda x: (x['PositionShort'], x['LastName']), teams['Chelsea'])))
-#opteam = OptimalTeam(teams, 'Arsenal', 'Chelsea')
-#print(getBest(teams, 'Fouls'))
-#getPlayersFromTeamByPos(teams, 'Liverpool', 'D(C)')
-#print(getPos(getBest(teams, 'Fouls'), 'Rooney'))
-
-opt = OptimalTeam(teams)
-opt.getOptimalTeam('Arsenal', 'Chelsea', '4-4-2')
