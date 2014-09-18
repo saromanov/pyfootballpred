@@ -4,6 +4,9 @@ import json
 import itertools
 from collections import Counter, namedtuple
 import itertools
+from fn import F, op, _
+from fn import recur
+from fn.iters import take, drop, map, filter
 
 #Only for English Premier League
 teamsIds = ['26','167','15','13','31','32','18','162','30','23','96','259','29','175','24',
@@ -20,6 +23,7 @@ class ManageData:
 			self.data = self._readData(url)
 		if path != None:
 			self.data = self._loadData(path)
+		self.teams = self.data['teams']
 
 	def _readData(self, url):
 		opener = urllib.request.build_opener()
@@ -63,7 +67,23 @@ class ManageData:
 		with open('teams','w') as outfile:
 			json.dump({'teams': values}, outfile)
 
+	def getBest(self, param, limit=None):
+		'''
+			Return list of best playerts by some param
+			For example, get "best" players by Fouls
+		'''
 
+		@recur.tco
+		def recurgetBest(teamsdata, teams, param, data=[]):
+			if len(teams) == 0:return False, data
+			team = teams.pop()
+			newvalue = [(t[param], t['LastName'], t['TeamName']) for t in teamsdata[team]]
+			return True, (teamsdata, teams, param, data+newvalue, )
+
+		values = recurgetBest(self.teams, list(self.teams.keys()), param)
+		if limit == None:
+			limit = len(values)
+		return list(reversed(sorted(values)))[0:limit]
 
 def getStat(result):
 	for r in result:
@@ -92,10 +112,7 @@ def getActivity():
 		print(d.find('defaultWsPlayerStatsConfigParams.defaultParams'))'''
 
 def getPlayersFromTeamByPos(teamsdata, team, pos):
-	currteam = teamsdata[team]
-	for curr in currteam:
-		if curr['PositionShort'] ==pos:
-			yield curr
+	return list(filter(lambda x: x['PositionShort'] == pos, teamsdata[team]))
 
 def getPlayer(teamdata, lastname):
 	pass
@@ -105,16 +122,6 @@ def comparePlayers(teamsdata, player, teams):
 		Compare player with players from other team on same position
 	'''
 	return teams
-
-
-def getBest(teamsdata, crireria,limit=None):
-	values = []
-	for team in teams.keys():
-		for t in teams[team]:
-			values.append((t[crireria], t['LastName'], t['TeamName']))
-	if limit == None:
-		limit = len(values)
-	return list(reversed(sorted(values)))[0:limit]
 
 def getPos(sorttuple, player):
 	'''
@@ -214,15 +221,19 @@ class OptimalTeam:
 		'''
 			Best players from opposite team
 		'''
-		opplayers = list(getPlayersFromTeamByPos(self.teamdata, opteam, 'FW'))
+		gs = 'GameStarted'
+		opplayers = list(filter(lambda x:x[gs] > 0, \
+			getPlayersFromTeamByPos(self.teamdata, opteam, 'FW')))
 		#values = list(filter(lambda x: x[-1:][0] > 0, self._getParamValues(opplayers, params)))
-		print(teamdata[0]['WasDribbled'])
 		for v in params.keys():
+			print(opplayers)
 			for player in teamdata:
+				#preresult5 = list(F() << (_/player[gs]) << (filter, _ > 0))
 				preresult = list(
-					filter(lambda x: x > 0, \
+					map(_/player[gs],
+					filter(_ > 0, \
 					map(lambda x: player[x], params[v]))
-					)
+					))
 				print(preresult)
 
 	def _getDefences(self, num):
