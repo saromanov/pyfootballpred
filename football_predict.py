@@ -99,7 +99,6 @@ def parseOnlineTextMatch(url):
 	'''
 	pass
 
-
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
 	startstat = data.find('defaultWsPlayerStatsConfigParams.defaultParams')+49
@@ -137,6 +136,8 @@ class OptimalTeamException(Exception):
 class OptimalTeam:
 	def __init__(self, teamdata):
 		self.teamdata = teamdata
+		self.fwparams = {'Dribbles': ['WasDribbled'], \
+		'TotalShots': ['ShotsBlocked'], 'Goals':['ShotsBlocked']}
 
 	def choose(self):
 		'''
@@ -165,12 +166,13 @@ class OptimalTeam:
 			AM - Attack mid
 		'''
 		if team not in self.teamdata:
-			raise  "This team not in base"
-		position = ['DF', 'FW']
-		form_data = {'GK':1}
+			raise OptimalTeamException("This team not in base")
 		form_res = list(map(lambda x: int(x), formation.split('-')))
+		if len(form_res) != 3:
+			raise OptimalTeamException("Error in formation representation")
 		GK = self._chooseGK(opteam)
-		self._chooseDefence(team, opteam, form_res[0])
+		#self._chooseDefence(team, opteam, form_res[0])
+		self._chooseForward(team, opteam, num)
 
 	def _getParamValues(self, players, values):
 		return list(map(lambda x: [x[p] for p in values], players))
@@ -205,17 +207,40 @@ class OptimalTeam:
 		minv = self._optimalPlayers(np.array(tominvalues), np.argmin, 2, players)
 		#if same players both in maxv and minv append in result list
 		data = list(maxv.intersection(minv))
-		self._opteamOptimal({'Dribbles': ['WasDribbled'], \
-			'TotalShots': ['ShotsBlocked'], 'Goals':['ShotsBlocked']}, \
-			opteam, players)
+		self._opteamOptimal(self.fwparams, opteam, players)
 		if len(data) == 2:
 			return data
 
-
+	def _chooseForward(self, team, opteam, num):
+		'''
+			Choose best forward for this moment
+		'''
+		players = list(getPlayersFromTeamByPos(self.teamdata, team, 'FW'))
+		if num > len(players):
+			#raise OptimalTeamException("Count of selectable players, more than players")
+			num = len(players)
+		result = self._getParamValues(players, self.fwparams)
+		target = self._optimalPlayers(np.array(result), np.argmax, num, players)
+		print(target)
 
 	def _optimalPlayers(self, matr, func, num, players):
-		c = Counter(func(matr, axis=0)).most_common(num)
-		return set(map(lambda x: players[x[0]]['LastName'], c))
+
+		@recur.tco
+		def optimalInner(matr, func, num, players, res=set()):
+			c = Counter(func(matr, axis=0)).most_common(num)
+			result = set(map(lambda x: players[x[0]]['LastName'], c))
+			if len(result) == num: 
+				res |= result
+				return False, list(res)
+			idxs = list(filter(lambda x: players[x]['LastName'] in result, \
+				range(len(players))))
+			temp = matr.tolist()
+			for i in idxs:
+				del players[i]
+				del temp[i]
+			res |= result
+			return True, (np.array(temp), func, num-len(result), players, res)
+		return optimalInner(matr, func, num, players, )
 
 	def _opteamOptimal(self, params, opteam, teamdata):
 		'''
@@ -277,3 +302,4 @@ def GkToForward(player, gk):
 	if gk[0] == 0:
 		return 0
 	return player[0]/gk[0]
+
