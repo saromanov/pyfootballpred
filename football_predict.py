@@ -7,6 +7,7 @@ import itertools
 from fn import F, op, _
 from fn import recur
 from fn.iters import take, drop, map, filter
+import textblob
 
 #Only for English Premier League
 teamsIds = ['26','167','15','13','31','32','18','162','30','23','96','259','29','175','24',
@@ -99,6 +100,7 @@ def parseOnlineTextMatch(url):
 	'''
 	pass
 
+
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
 	startstat = data.find('defaultWsPlayerStatsConfigParams.defaultParams')+49
@@ -165,14 +167,17 @@ class OptimalTeam:
 			FW - Forward
 			AM - Attack mid
 		'''
+		result = {}
 		if team not in self.teamdata:
 			raise OptimalTeamException("This team not in base")
 		form_res = list(map(lambda x: int(x), formation.split('-')))
 		if len(form_res) != 3:
 			raise OptimalTeamException("Error in formation representation")
-		GK = self._chooseGK(opteam)
-		#self._chooseDefence(team, opteam, form_res[0])
-		self._chooseForward(team, opteam, num)
+		result['GK'] = [self._chooseGK(team)]
+		result['DF'] = self._chooseDefence(team, opteam, form_res[0])
+		result['MF'] = self._chooseMidfielder(team, form_res[1])
+		result['FW'] = self._chooseForward(team, opteam, form_res[2])
+		return result
 
 	def _getParamValues(self, players, values):
 		return list(map(lambda x: [x[p] for p in values], players))
@@ -186,30 +191,52 @@ class OptimalTeam:
 		c = Counter(np.argmax(matr, axis=0)).most_common(1).pop()
 		return players[c[0]]['LastName']
 
+	def _chooseMidfielder(self, team, num):
+		return []
+
 	def _chooseDefence(self, team, opteam, num):
 		'''
 			Брать во внимание уровень нападающих в команде соперников
 		'''
+		result = []
 		positions = self._getDefences(num)
-		center = self._chooseDefenceCenter(team, opteam)
+		result.append(self._chooseDefenceCenter(team, opteam, Counter(positions)['D(C)']))
+		result.append(self._chooseDefenceLR(team, 2))
 		'''for pos in positions:
 			players = list(getPlayersFromTeamByPos(self.teamdata, team, pos))
 			vecparams = list(map(lambda x: [x['AerialWon']], players))
 			break'''
 
-	def _chooseDefenceCenter(self, team, opteam):
+	def _chooseDefenceLR(self, team, num):
+		result = []
+		if num == 1:
+			pass
+
+		def get(idv):
+			params = ['KeyPasses', 'Dribbles', 'TotalPasses', 'Rating', 'OffsidesWon', \
+			'GameStarted']
+			playersL = list(getPlayersFromTeamByPos(self.teamdata, team, idv))
+			tomaxvalues = self._getParamValues(playersL, params)
+			maxv = self._optimalPlayers(np.array(tomaxvalues), np.argmax, 1, playersL)
+			return maxv.pop()
+
+		return [get('D(L)')] + [get('D(R)')]
+
+	def _chooseDefenceCenter(self, team, opteam, num):
 		players = list(getPlayersFromTeamByPos(self.teamdata, team, 'D(C)'))
 		params = ['TotalTackles', 'AerialWon', 'Rating','OffsidesWon','GameStarted',\
 		 'ShotsBlocked', 'LastName']
 		tomaxvalues = self._getParamValues(players, params)
 		tominvalues = self._getParamValues(players,['AerialLost','Dispossesed','Yellow'])
-		maxv = self._optimalPlayers(np.array(tomaxvalues), np.argmax, 2, players)
-		minv = self._optimalPlayers(np.array(tominvalues), np.argmin, 2, players)
+		maxv = self._optimalPlayers(np.array(tomaxvalues), np.argmax, num, players)
+		minv = self._optimalPlayers(np.array(tominvalues), np.argmin, num, players)
 		#if same players both in maxv and minv append in result list
-		data = list(maxv.intersection(minv))
-		self._opteamOptimal(self.fwparams, opteam, players)
-		if len(data) == 2:
-			return data
+		data = list(set(maxv).intersection(set(minv)))
+		#self._opteamOptimal(self.fwparams, opteam, players)
+		size = len(data)
+		if size == 2: return data
+		else: return data + list(filter(lambda x: x not in data, maxv))
+
 
 	def _chooseForward(self, team, opteam, num):
 		'''
@@ -221,7 +248,7 @@ class OptimalTeam:
 			num = len(players)
 		result = self._getParamValues(players, self.fwparams)
 		target = self._optimalPlayers(np.array(result), np.argmax, num, players)
-		print(target)
+		return target
 
 	def _optimalPlayers(self, matr, func, num, players):
 
