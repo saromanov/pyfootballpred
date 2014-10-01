@@ -101,6 +101,16 @@ def parseOnlineTextMatch(url):
 	pass
 
 
+#http://www.whoscored.com/Teams/32/Fixtures/England-Manchester-United
+
+#Распарсить Лайв матча
+#http://www.whoscored.com/Matches/713513/Live
+
+#Рассчёт стабильности игрока
+#ПОиск похожих игроков(на основе статистики)
+
+#Наверное лучшие использовать гравовую базу данных
+
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
 	startstat = data.find('defaultWsPlayerStatsConfigParams.defaultParams')+49
@@ -182,16 +192,32 @@ class OptimalTeam:
 	def _getParamValues(self, players, values):
 		return list(map(lambda x: [x[p] for p in values], players))
 
-	def _chooseGK(self, team):
-		pos = 'GK'
+	def _getTargetPlayers(team, num, pos, params):
+		pos = pos
 		players = list(getPlayersFromTeamByPos(self.teamdata, team, pos))
-		params = ['TotalClearances', 'Rating', 'GameStarted', 'ManOfTheMatch', 'AerialWon']
 		vecparams = self._getParamValues(players, params)
 		matr = np.array(vecparams)
-		c = Counter(np.argmax(matr, axis=0)).most_common(1).pop()
+		c = Counter(np.argmax(matr, axis=0)).most_common(num).pop()
 		return players[c[0]]['LastName']
 
+	def _chooseGK(self, team):
+		return self._getTargetPlayers(1, 'GK', \
+			['TotalClearances', 'Rating', 'GameStarted', 'ManOfTheMatch', 'AerialWon'])
+
 	def _chooseMidfielder(self, team, num):
+		if num == 0:
+			raise OptimalTeamException("Count of midfielders is zero")
+		def getMFCenter(teamdata, team, num):
+			pos = 'M(C)'
+			players = list(getPlayersFromTeamByPos(self.teamdata, team, pos))
+			params = ['Rating', 'TotalPasses', 'KeyPasses', 'GameStarted']
+
+			print(players)
+
+		def getMFLR(self, team, num):
+			pass
+		center = getMFCenter(self.teamdata, team,2)
+		print("THIS IS RESULT: ", self.teamdata[team])
 		return []
 
 	def _chooseDefence(self, team, opteam, num):
@@ -200,12 +226,9 @@ class OptimalTeam:
 		'''
 		result = []
 		positions = self._getDefences(num)
-		result.append(self._chooseDefenceCenter(team, opteam, Counter(positions)['D(C)']))
-		result.append(self._chooseDefenceLR(team, 2))
-		'''for pos in positions:
-			players = list(getPlayersFromTeamByPos(self.teamdata, team, pos))
-			vecparams = list(map(lambda x: [x['AerialWon']], players))
-			break'''
+		result += self._chooseDefenceCenter(team, opteam, Counter(positions)['D(C)'])
+		result += self._chooseDefenceLR(team, num)
+		return result
 
 	def _chooseDefenceLR(self, team, num):
 		result = []
@@ -329,4 +352,3 @@ def GkToForward(player, gk):
 	if gk[0] == 0:
 		return 0
 	return player[0]/gk[0]
-
