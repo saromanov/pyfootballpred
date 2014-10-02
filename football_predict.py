@@ -101,16 +101,6 @@ def parseOnlineTextMatch(url):
 	pass
 
 
-#http://www.whoscored.com/Teams/32/Fixtures/England-Manchester-United
-
-#Распарсить Лайв матча
-#http://www.whoscored.com/Matches/713513/Live
-
-#Рассчёт стабильности игрока
-#ПОиск похожих игроков(на основе статистики)
-
-#Наверное лучшие использовать гравовую базу данных
-
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
 	startstat = data.find('defaultWsPlayerStatsConfigParams.defaultParams')+49
@@ -125,14 +115,10 @@ def getActivity():
 def getPlayersFromTeamByPos(teamsdata, team, pos):
 	return list(filter(lambda x: x['PositionShort'] == pos, teamsdata[team]))
 
+
 def getPlayer(teamdata, lastname):
-	pass
-	
-def comparePlayers(teamsdata, player, teams):
-	'''
-		Compare player with players from other team on same position
-	'''
-	return teams
+	return list(filter(lambda x: x['LastName'] == lastname, teamdata))[0]
+
 
 def getPos(sorttuple, player):
 	'''
@@ -192,32 +178,33 @@ class OptimalTeam:
 	def _getParamValues(self, players, values):
 		return list(map(lambda x: [x[p] for p in values], players))
 
-	def _getTargetPlayers(team, num, pos, params):
+	def _getTargetPlayers(self, team, num, pos, params):
 		pos = pos
 		players = list(getPlayersFromTeamByPos(self.teamdata, team, pos))
+		params = ['TotalClearances', 'Rating', 'GameStarted', 'ManOfTheMatch', 'AerialWon']
 		vecparams = self._getParamValues(players, params)
 		matr = np.array(vecparams)
 		c = Counter(np.argmax(matr, axis=0)).most_common(num).pop()
 		return players[c[0]]['LastName']
 
 	def _chooseGK(self, team):
-		return self._getTargetPlayers(1, 'GK', \
-			['TotalClearances', 'Rating', 'GameStarted', 'ManOfTheMatch', 'AerialWon'])
+		pos = 'GK'
+		players = list(getPlayersFromTeamByPos(self.teamdata, team, pos))
+		params = ['TotalClearances', 'Rating', 'GameStarted', 'ManOfTheMatch', 'AerialWon']
+		return self._getTargetPlayers(team, 1, pos, params)
 
 	def _chooseMidfielder(self, team, num):
 		if num == 0:
 			raise OptimalTeamException("Count of midfielders is zero")
-		def getMFCenter(teamdata, team, num):
-			pos = 'M(C)'
-			players = list(getPlayersFromTeamByPos(self.teamdata, team, pos))
-			params = ['Rating', 'TotalPasses', 'KeyPasses', 'GameStarted']
 
-			print(players)
+		def getMFCenter(func, team, num):
+			pos = 'M(C)'
+			params = ['Rating', 'TotalPasses', 'KeyPasses', 'GameStarted']
+			return func(team, num, pos, params)
 
 		def getMFLR(self, team, num):
 			pass
-		center = getMFCenter(self.teamdata, team,2)
-		print("THIS IS RESULT: ", self.teamdata[team])
+		center = getMFCenter(self._getTargetPlayers, team,2)
 		return []
 
 	def _chooseDefence(self, team, opteam, num):
@@ -318,6 +305,8 @@ class OptimalTeam:
 		return pos
 
 
+class StatisticsException(Exception):
+	pass
 
 class Statistics:
 	'''
@@ -339,6 +328,38 @@ class Statistics:
 			result.append(list(map(lambda x: [x[first], x[second],x['GameStarted']], bans[targteam])))
 		return sorted(result, key=lambda x:x[2])
 
+	def _checkTeam(self, team):
+		if team not in self.teamdata:
+			raise StatisticsException('{0} not contains in teams'.format(team))
+
+	def comparePlayers(self, data1, data2):
+		'''
+			Format for data1 and for data2 is tuple (team, lastname)
+		'''
+		team1, player1 = data1
+		team2, player2 = data2
+		self._checkTeam(team1)
+		self._checkTeam(team2)
+		playerdata1 = getPlayer(self.teamdata[team1], player1)
+		playerdata2 = getPlayer(self.teamdata[team2], player2)
+		result1 = 0
+		result2 = 0
+		print('{0} vs {1}'.format(player1, player2))
+		for item in playerdata1.keys():
+			try:
+				if int(playerdata1[item]) > int(playerdata2[item]):
+					result1 += 1
+				elif int(playerdata1[item]) < int(playerdata2[item]):
+					result2 += 1
+				else:
+					result1 += 1
+					result2 += 1
+			except Exception as e:
+				pass
+			print('{0} : {1} - {2}'.format(item, playerdata1[item], playerdata2[item]))
+		print(' ')
+		print('Result: {0} - {1}'.format(result1, result2))
+
 
 	def predict(self, params, predvalue):
 		'''
@@ -352,3 +373,4 @@ def GkToForward(player, gk):
 	if gk[0] == 0:
 		return 0
 	return player[0]/gk[0]
+
