@@ -2,11 +2,14 @@ import numpy as np
 import urllib.request
 import json
 import itertools
+import functools
 from collections import Counter, namedtuple
 import itertools
 from fn import F, op, _
 from fn import recur
 from fn.iters import take, drop, map, filter
+import builtins
+from multiprocessing import Pool, Process, Queue, Lock, Array, Value
 import textblob
 
 #Only for English Premier League
@@ -179,13 +182,18 @@ class OptimalTeam:
 		return list(map(lambda x: [x[p] for p in values], players))
 
 	def _getTargetPlayers(self, team, num, pos, params):
-		pos = pos
-		players = list(getPlayersFromTeamByPos(self.teamdata, team, pos))
-		params = ['TotalClearances', 'Rating', 'GameStarted', 'ManOfTheMatch', 'AerialWon']
+		#print(list(map(lambda x:x['PositionShort'], self.teamdata[team])))
+		players = []
+		if type(pos) == builtins.list:
+			for p in pos:
+				players += getPlayersFromTeamByPos(self.teamdata, team, p)
+		else:
+			players = list(getPlayersFromTeamByPos(self.teamdata, team, pos))
+
+		#params = ['TotalClearances', 'Rating', 'GameStarted', 'ManOfTheMatch', 'AerialWon']
 		vecparams = self._getParamValues(players, params)
 		matr = np.array(vecparams)
-		c = Counter(np.argmax(matr, axis=0)).most_common(num).pop()
-		return players[c[0]]['LastName']
+		if len(matr) > 0: return self._optimalPlayers(matr, np.argmax, num, players)
 
 	def _chooseGK(self, team):
 		pos = 'GK'
@@ -196,16 +204,30 @@ class OptimalTeam:
 	def _chooseMidfielder(self, team, num):
 		if num == 0:
 			raise OptimalTeamException("Count of midfielders is zero")
-
 		def getMFCenter(func, team, num):
 			pos = 'M(C)'
 			params = ['Rating', 'TotalPasses', 'KeyPasses', 'GameStarted']
 			return func(team, num, pos, params)
 
-		def getMFLR(self, team, num):
-			pass
-		center = getMFCenter(self._getTargetPlayers, team,2)
-		return []
+		def getMFL(func, team, num):
+			pos = ['AM(LR)', 'AM(CLR)', 'AM(R)', 'AM(L)']
+			params = ['Rating', 'KeyPasses']
+			return func(team, num, pos, params)
+		result = []
+		cent = int(num)/2
+		lf = num - cent
+		if num == 4:
+			cent = 2
+			lf = 2
+		if num == 5:
+			cent = 3
+			lf = 2
+		if num == 3:
+			cent = 1
+			lf = 2
+		center = getMFCenter(self._getTargetPlayers, team,cent)
+		lr = getMFL(self._getTargetPlayers, team, lf)
+		return center + lr
 
 	def _chooseDefence(self, team, opteam, num):
 		'''
@@ -288,7 +310,7 @@ class OptimalTeam:
 			getPlayersFromTeamByPos(self.teamdata, opteam, 'FW')))
 		#values = list(filter(lambda x: x[-1:][0] > 0, self._getParamValues(opplayers, params)))
 		for v in params.keys():
-			print(opplayers)
+			#print(opplayers)
 			for player in teamdata:
 				#preresult5 = list(F() << (_/player[gs]) << (filter, _ > 0))
 				preresult = list(
@@ -328,9 +350,63 @@ class Statistics:
 			result.append(list(map(lambda x: [x[first], x[second],x['GameStarted']], bans[targteam])))
 		return sorted(result, key=lambda x:x[2])
 
+	def compareTeams(self, team1, team2):
+		'''
+			Compare players by pos with two teams
+			TODO: Implement it
+		'''
+		if team1 not in self.teamdata or team2 not in self.teamdata:
+			raise StatisticsException("On of teams not in the base")
+
+		result = {}
+		poses = set(map(lambda x: x['PositionShort'], self.teamdata[team1]))
+		for pos in poses:
+			players1 = list(getPlayersFromTeamByPos(self.teamdata, team1, pos))
+			players2 = list(getPlayersFromTeamByPos(self.teamdata, team2, pos))
+			q = Queue()
+			q.put(players1)
+			q.put(players2)
+			p = Process(target=self._compareByPos, args=(q, ))
+			p.start()
+			p.join()
+			result = q.get()
+			print(result)
+		return result
+
+	def _compareByPos(self, q):
+		players2 = q.get()
+		players1 = q.get()
+		for p1 in players1:
+			for p2 in players2:
+				pass
+		q.put(1)
+
+
 	def _checkTeam(self, team):
 		if team not in self.teamdata:
 			raise StatisticsException('{0} not contains in teams'.format(team))
+
+	def compareInner(self, p1, p2):
+		@recur.tco
+		def compare(values, p1, p2, arr):
+			if len(values) == 0: return False, arr
+			item = values.pop()
+			try:
+				if int(p1[item]) > int(p2[item]):
+					arr.append(1)
+					return True, (values, p1, p2, arr, )
+				if int(p1[item]) < int(p2[item]):
+					arr.append(0)
+					return True, (values, p1, p2, arr, )
+
+			except Exception as e:
+				return True, (values, p1, p2, arr, )
+			return True, (values, p1, p2, arr, )
+
+		values = list(p1.keys())
+		result = compare(values, p1, p2, [])
+		res1 = Counter(result)
+		return res1[1], res1[0]
 
 	def comparePlayers(self, data1, data2):
 		'''
@@ -360,11 +436,18 @@ class Statistics:
 		print(' ')
 		print('Result: {0} - {1}'.format(result1, result2))
 
+	def showComparePlayers(self, data1, data2):
+		'''
+			show/plot results in compare players
+		'''
+		pass
+
 
 	def predict(self, params, predvalue):
 		'''
 			params - data for prediction
 			predvalue - prediction value
+			Find optimal prediction
 		'''
 		pass
 
@@ -373,4 +456,5 @@ def GkToForward(player, gk):
 	if gk[0] == 0:
 		return 0
 	return player[0]/gk[0]
+
 
