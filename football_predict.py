@@ -89,6 +89,22 @@ class ManageData:
 			limit = len(values)
 		return list(reversed(sorted(values)))[0:limit]
 
+	def parseOnlineTextGame(self, url):
+		'''
+			http://www.whoscored.com/Matches/829535/Live
+		'''
+		data = self._readData(url)
+		if data == None:
+			raise Exception("Something went wrong in read data")
+		idxstart = data.find('commentaryUpdater.load([[')
+		if idxstart != -1:
+			idxend = data.find(', 0]);', idxstart)
+			if idxend == -1:
+				raise Exception("Something went wrong in parse Online Text Game")
+			for value in data[idxstart : idxend].split('\n'):
+				print( value)
+
+
 def getStat(result):
 	for r in result:
 		if int(r['TotalPasses']) != 0:
@@ -96,13 +112,6 @@ def getStat(result):
 			if dr > mostDribled:
 				mostDribled = dr
 				name = r['LastName']
-
-def parseOnlineTextMatch(url):
-	'''
-		http://www.whoscored.com/Matches/829535/Live
-	'''
-	pass
-
 
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
@@ -456,5 +465,4 @@ def GkToForward(player, gk):
 	if gk[0] == 0:
 		return 0
 	return player[0]/gk[0]
-
 
