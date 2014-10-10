@@ -4,7 +4,6 @@ import json
 import itertools
 import functools
 from collections import Counter, namedtuple
-import itertools
 from fn import F, op, _
 from fn import recur
 from fn.iters import take, drop, map, filter
@@ -101,8 +100,18 @@ class ManageData:
 			idxend = data.find(', 0]);', idxstart)
 			if idxend == -1:
 				raise Exception("Something went wrong in parse Online Text Game")
+			result = []
 			for value in data[idxstart : idxend].split('\n'):
-				print( value)
+				preres = value[value.find('[')+2: value.find(']')]
+				try:
+					data = preres.split(',')
+					mins = int(data[0].split('\\')[0])
+					typeevent = data[1]
+					result.append((mins, typeevent, data[2]))
+				except Exception as e:
+					pass
+			return result
+
 
 
 def getStat(result):
@@ -112,6 +121,7 @@ def getStat(result):
 			if dr > mostDribled:
 				mostDribled = dr
 				name = r['LastName']
+
 
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
@@ -460,9 +470,36 @@ class Statistics:
 		'''
 		pass
 
+
+class TextGame:
+	'''
+		Get data from online of game
+	'''
+	def __init__(self):
+		pass
+
+	def _getRating(self, data):
+		items = {'yellow card':-1, 'free kick won':1, 'goal':1, 'free kick lost':-1,\
+		'miss':-1, 'red card':-1}
+		result = 0
+		for d in data:
+			result += items[d[1]]
+		return result
+		
+
+	def extractInfo(self, data, targteam):
+		result = list(filter(lambda x: x[2].find(targteam) != -1, data))
+		for r in result:
+			print(r)
+
+	#Need to append compare games in live
+	def similarGames(self, data, team):
+		pass
+
 def GkToForward(player, gk):
 	''' Соотношение удара по воротам и отбитым мячам'''
 	if gk[0] == 0:
 		return 0
 	return player[0]/gk[0]
+
 
