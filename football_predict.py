@@ -10,6 +10,7 @@ from fn.iters import take, drop, map, filter
 import builtins
 from multiprocessing import Pool, Process, Queue, Lock, Array, Value
 import textblob
+#from requests import async
 
 #Only for English Premier League
 teamsIds = ['26','167','15','13','31','32','18','162','30','23','96','259','29','175','24',
@@ -97,7 +98,7 @@ class ManageData:
 			raise Exception("Something went wrong in read data")
 		idxstart = data.find('commentaryUpdater.load([[')
 		if idxstart != -1:
-			idxend = data.find(', 0]);', idxstart)
+			idxend = data.find(']);', idxstart)
 			if idxend == -1:
 				raise Exception("Something went wrong in parse Online Text Game")
 			result = []
@@ -106,22 +107,11 @@ class ManageData:
 				try:
 					data = preres.split(',')
 					mins = int(data[0].split('\\')[0])
-					typeevent = data[1]
+					typeevent = data[1][1:-1]
 					result.append((mins, typeevent, data[2]))
 				except Exception as e:
 					pass
 			return result
-
-
-
-def getStat(result):
-	for r in result:
-		if int(r['TotalPasses']) != 0:
-			dr = int(r['AccuratePasses']) / int(r['TotalPasses'])
-			if dr > mostDribled:
-				mostDribled = dr
-				name = r['LastName']
-
 
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
@@ -475,31 +465,41 @@ class TextGame:
 	'''
 		Get data from online of game
 	'''
-	def __init__(self):
-		pass
+	def __init__(self, games=None):
+		self.games = games
 
 	def _getRating(self, data):
-		items = {'yellow card':-1, 'free kick won':1, 'goal':1, 'free kick lost':-1,\
+		items = {'yellow card':-1, 'free kick won':2, 'goal':2, 'free kick lost':-1,\
 		'miss':-1, 'red card':-1}
-		result = 0
-		for d in data:
-			result += items[d[1]]
-		return result
+		return functools.reduce(lambda x,y: x+items[y[1]] if y[1] in items else x, \
+			data,0)
 		
 
 	def extractInfo(self, data, targteam):
 		result = list(filter(lambda x: x[2].find(targteam) != -1, data))
-		for r in result:
-			print(r)
+		rating = self._getRating(result)
+		print(rating)
 
 	#Need to append compare games in live
-	def similarGames(self, data, team):
-		pass
+	def similarGames(self, current, data, team, minute):
+		''' Проходим по всем матчам в базе и ищем наиболее похожие
+			Нужна нормализация по минутам
+		'''
+		matrix = np.matrix([])
+		for d in data:
+			pass
+
+	def _getGamesUntilMinute(self):
+		'''
+			Get games before n minutes
+		'''
+		if self.games != None:
+			for game in self.games:
+				pass
 
 def GkToForward(player, gk):
 	''' Соотношение удара по воротам и отбитым мячам'''
 	if gk[0] == 0:
 		return 0
 	return player[0]/gk[0]
-
 
