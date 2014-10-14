@@ -478,28 +478,40 @@ class TextGame:
 	def extractInfo(self, data, targteam):
 		result = list(filter(lambda x: x[2].find(targteam) != -1, data))
 		rating = self._getRating(result)
-		print(rating)
+		minuts = list(self._getGamesUntilMinute(25))
 
 	#Need to append compare games in live
 	def similarGames(self, current, data, team, minute):
 		''' Проходим по всем матчам в базе и ищем наиболее похожие
 			Нужна нормализация по минутам
+			current - this game
+			data - target data
+			team - this team
+			minute - until this minute
 		'''
-		matrix = np.matrix([])
-		for d in data:
-			pass
+		#Get all games untill current minute
+		targetevents = list(map(lambda x: (x[0], x[1]), \
+			self._getGameUntilMinute(current, minute)))
+		minuts = list(self._getGamesUntilMinute(minute))
+		events = list(map(lambda x: [(i[0], i[1]) for i in x], minuts))
+		#Последовательность событий и события в определённый промежуток времени
+		for event in events:
+			print(event, targetevents)
+		#result = list(map(lambda x: x, minuts))
 
-	def _getGamesUntilMinute(self):
+	def _getGameUntilMinute(self, game, minute):
+		return reversed(list(itertools.dropwhile(lambda x: x[0] >= minute, game)))
+
+	def _getGamesUntilMinute(self, minute):
 		'''
 			Get games before n minutes
 		'''
 		if self.games != None:
 			for game in self.games:
-				pass
+				yield self._getGameUntilMinute(game, minute)
 
 def GkToForward(player, gk):
 	''' Соотношение удара по воротам и отбитым мячам'''
 	if gk[0] == 0:
 		return 0
 	return player[0]/gk[0]
-
