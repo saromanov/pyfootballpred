@@ -10,6 +10,7 @@ from fn.iters import take, drop, map, filter
 import builtins
 from multiprocessing import Pool, Process, Queue, Lock, Array, Value
 import textblob
+from sklearn.neighbors.nearest_centroid import NearestCentroid
 #from requests import async
 
 #Only for English Premier League
@@ -490,14 +491,40 @@ class TextGame:
 			minute - until this minute
 		'''
 		#Get all games untill current minute
-		targetevents = list(map(lambda x: (x[0], x[1]), \
+		targetevent = list(map(lambda x: (x[0], x[1]), \
 			self._getGameUntilMinute(current, minute)))
 		minuts = list(self._getGamesUntilMinute(minute))
 		events = list(map(lambda x: [(i[0], i[1]) for i in x], minuts))
+		self._distance(targetevent, events)
 		#Последовательность событий и события в определённый промежуток времени
-		for event in events:
-			print(event, targetevents)
+				#print(targ, event)
 		#result = list(map(lambda x: x, minuts))
+
+	def _clustering(self, targetgame, games):
+		'''
+			Find similar game with clustering
+		'''
+		preparegames = list(map(lambda x: [i[1] for i in x], games))
+		preparegame = list(map(lambda x: x[1], targetgame))
+		lables = list(range(len(games)-1))
+		clf = NearestCentroid()
+		clf.fit(preparegames, lables)
+		print(clf.predict(preparegame))
+
+	def _distance(self, targetevent, events):
+		'''
+			Find similar games(events) with naive distance
+			todo: normalize to similar length
+		'''
+		result = []
+		for event in events:
+			for targ in targetevent:
+				tmin, tdescription = targ
+				tempdata = []
+				for evt in event:
+					mins, description = evt
+					if tdescription == description:
+						 tempdata.append(abs(tmin - mins))
 
 	def _getGameUntilMinute(self, game, minute):
 		return reversed(list(itertools.dropwhile(lambda x: x[0] >= minute, game)))

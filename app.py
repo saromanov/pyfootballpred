@@ -1,11 +1,26 @@
+import tornado.ioloop
+import tornado.web
+import tornado.iostream
+import tornado.escape
+import tornado.template
 
-from flask import Flask, render_template, json, request, url_for, redirect
-from flask.ext.sqlalchemy import SQLAlchemy
-
-app = Flask(__name__)
-db = SQLAlchemy(app)
+import football_predict
 
 
-@app.route('/')
-def index():
-	return render_template('index.html')
+class MainHandler(tornado.web.RequestHandler):
+    def get(self):
+    	return self.render('indexserver.html', title="Football data", items=["test"])
+
+    def post(self):
+    	self.set_header("Content-Type", "text/plain")
+
+
+
+application = tornado.web.Application([
+    (r"/", MainHandler),
+    (r"/fun", AnotherHandler)
+])
+
+if __name__ == "__main__":
+    application.listen(8888)
+    tornado.ioloop.IOLoop.instance().start()
