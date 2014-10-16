@@ -495,18 +495,19 @@ class TextGame:
 			self._getGameUntilMinute(current, minute)))
 		minuts = list(self._getGamesUntilMinute(minute))
 		events = list(map(lambda x: [(i[0], i[1]) for i in x], minuts))
-		self._distance(targetevent, events)
+		#distresult = self._distance(targetevent, events)
+		clusterresult = self._clustering(targetevent, events)
 		#Последовательность событий и события в определённый промежуток времени
 				#print(targ, event)
 		#result = list(map(lambda x: x, minuts))
 
 	def _clustering(self, targetgame, games):
 		'''
-			Find similar game with clustering
+			Find similar games with clustering
 		'''
 		preparegames = list(map(lambda x: [i[1] for i in x], games))
 		preparegame = list(map(lambda x: x[1], targetgame))
-		lables = list(range(len(games)-1))
+		lables = list(range(len(games)))
 		clf = NearestCentroid()
 		clf.fit(preparegames, lables)
 		print(clf.predict(preparegame))
@@ -516,15 +517,26 @@ class TextGame:
 			Find similar games(events) with naive distance
 			todo: normalize to similar length
 		'''
-		result = []
+		SCORE_INIT = 99999
+		#Global scores
+		bestscore = SCORE_INIT
+		bestscore2 = SCORE_INIT
+		game = ''
 		for event in events:
+			localscore = SCORE_INIT
+			localscore2 = SCORE_INIT
+			localgame = ''
 			for targ in targetevent:
 				tmin, tdescription = targ
-				tempdata = []
-				for evt in event:
-					mins, description = evt
-					if tdescription == description:
-						 tempdata.append(abs(tmin - mins))
+				preres = list(map(lambda x: -1 if x[1] != tdescription else (abs(tmin - x[0])), event))
+				res = abs(sum(preres))
+				minuscount = len(list(filter(lambda x: x == -1, preres)))
+				if minuscount < localscore:
+					if localscore2 < res:
+						localscore = minuscount
+						localscore2 = res
+						localgame = event
+		return game
 
 	def _getGameUntilMinute(self, game, minute):
 		return reversed(list(itertools.dropwhile(lambda x: x[0] >= minute, game)))
