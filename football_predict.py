@@ -106,14 +106,32 @@ class ManageData:
 			for value in data[idxstart : idxend].split('\n'):
 				preres = value[value.find('[')+2: value.find(']')]
 				try:
-					data = preres.split(',')
-					mins = int(data[0].split('\\')[0])
-					typeevent = data[1][1:-1]
-					result.append((mins, typeevent, data[2]))
+					splitdata = preres.split(',')
+					mins = int(splitdata[0].split('\\')[0])
+					typeevent = splitdata[1][1:-1]
+					result.append((mins, typeevent, splitdata[2]))
 				except Exception as e:
 					pass
-			return result
+			#game, score = self._getHeaderofGame(data)
+			#print(result, self._getHeaderofGame(data))
+			return result, self._getHeaderofGame(data)
 
+	def _getHeaderofGame(self, data):
+		'''
+			Parse main information about game (title, score)
+		'''
+		target = 'matchHeader.load('
+		startidx = data.find(target)
+		if startidx != -1:
+			finishidx = data.find(']', startidx)
+			if finishidx == 1:
+				raise Exception("Something wrong with getting results of the game")
+			subdata = data[startidx + len(target)+1: finishidx]
+			splitted = subdata.split(',')
+			game = (splitted[2][1:-1], splitted[3][1:-1])
+			score = splitted[-1:][0][1:-1]
+			return game, score
+			
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
 	startstat = data.find('defaultWsPlayerStatsConfigParams.defaultParams')+49
@@ -495,8 +513,9 @@ class TextGame:
 			self._getGameUntilMinute(current, minute)))
 		minuts = list(self._getGamesUntilMinute(minute))
 		events = list(map(lambda x: [(i[0], i[1]) for i in x], minuts))
-		#distresult = self._distance(targetevent, events)
-		clusterresult = self._clustering(targetevent, events)
+		distresult = self._distance(targetevent, events)
+		print(events)
+		#clusterresult = self._clustering(targetevent, events)
 		#Последовательность событий и события в определённый промежуток времени
 				#print(targ, event)
 		#result = list(map(lambda x: x, minuts))
@@ -508,9 +527,10 @@ class TextGame:
 		preparegames = list(map(lambda x: [i[1] for i in x], games))
 		preparegame = list(map(lambda x: x[1], targetgame))
 		lables = list(range(len(games)))
-		clf = NearestCentroid()
-		clf.fit(preparegames, lables)
-		print(clf.predict(preparegame))
+		print(games)
+		#clf = NearestCentroid()
+		#clf.fit(preparegames, lables)
+		#print(clf.predict(preparegame))
 
 	def _distance(self, targetevent, events):
 		'''
@@ -523,23 +543,24 @@ class TextGame:
 		bestscore2 = SCORE_INIT
 		game = ''
 		for event in events:
-			localscore = SCORE_INIT
-			localscore2 = SCORE_INIT
-			localgame = ''
+			localresult1 = 0
+			localresult2 = 0
 			for targ in targetevent:
 				tmin, tdescription = targ
 				preres = list(map(lambda x: -1 if x[1] != tdescription else (abs(tmin - x[0])), event))
 				res = abs(sum(preres))
 				minuscount = len(list(filter(lambda x: x == -1, preres)))
-				if minuscount < localscore:
-					if localscore2 < res:
-						localscore = minuscount
-						localscore2 = res
-						localgame = event
+				localresult1 += minuscount
+				localresult2 += res
+			if localresult1 < bestscore and localresult2 < bestscore2:
+				bestscore = localresult1
+				bestscore2 = localresult2
+				game = event
 		return game
 
 	def _getGameUntilMinute(self, game, minute):
-		return reversed(list(itertools.dropwhile(lambda x: x[0] >= minute, game)))
+		data, info = game
+		return reversed(list(itertools.dropwhile(lambda x: x[0] >= minute, data)))
 
 	def _getGamesUntilMinute(self, minute):
 		'''
