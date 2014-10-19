@@ -131,7 +131,6 @@ class ManageData:
 			game = (splitted[2][1:-1], splitted[3][1:-1])
 			score = splitted[-1:][0][1:-1]
 			return game, score
-			
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
 	startstat = data.find('defaultWsPlayerStatsConfigParams.defaultParams')+49
@@ -479,6 +478,14 @@ class Statistics:
 		'''
 		pass
 
+class Game:
+	'''
+		basic for game
+	'''
+	def __init__(self, data, info):
+		self.data = data
+		self.info = info
+
 
 class TextGame:
 	'''
@@ -509,16 +516,11 @@ class TextGame:
 			minute - until this minute
 		'''
 		#Get all games untill current minute
-		targetevent = list(map(lambda x: (x[0], x[1]), \
-			self._getGameUntilMinute(current, minute)))
-		minuts = list(self._getGamesUntilMinute(minute))
-		events = list(map(lambda x: [(i[0], i[1]) for i in x], minuts))
+		targetevent = self._getGameUntilMinute(current, minute)
+		events = list(self._getGamesUntilMinute(minute))
 		distresult = self._distance(targetevent, events)
-		print(events)
+		print(distresult.info, targetevent.info)
 		#clusterresult = self._clustering(targetevent, events)
-		#Последовательность событий и события в определённый промежуток времени
-				#print(targ, event)
-		#result = list(map(lambda x: x, minuts))
 
 	def _clustering(self, targetgame, games):
 		'''
@@ -536,18 +538,19 @@ class TextGame:
 		'''
 			Find similar games(events) with naive distance
 			todo: normalize to similar length
+			return Game object with optimal game
 		'''
 		SCORE_INIT = 99999
 		#Global scores
 		bestscore = SCORE_INIT
 		bestscore2 = SCORE_INIT
-		game = ''
+		game = Game('', '')
 		for event in events:
 			localresult1 = 0
 			localresult2 = 0
-			for targ in targetevent:
-				tmin, tdescription = targ
-				preres = list(map(lambda x: -1 if x[1] != tdescription else (abs(tmin - x[0])), event))
+			for targ in targetevent.data:
+				tmin, tdescription = targ[0], targ[1]
+				preres = list(map(lambda x: -1 if x[1] != tdescription else (abs(tmin - x[0])), event.data))
 				res = abs(sum(preres))
 				minuscount = len(list(filter(lambda x: x == -1, preres)))
 				localresult1 += minuscount
@@ -560,7 +563,7 @@ class TextGame:
 
 	def _getGameUntilMinute(self, game, minute):
 		data, info = game
-		return reversed(list(itertools.dropwhile(lambda x: x[0] >= minute, data)))
+		return Game(list(reversed(list(itertools.dropwhile(lambda x: x[0] >= minute, data)))), info)
 
 	def _getGamesUntilMinute(self, minute):
 		'''
@@ -575,3 +578,4 @@ def GkToForward(player, gk):
 	if gk[0] == 0:
 		return 0
 	return player[0]/gk[0]
+
