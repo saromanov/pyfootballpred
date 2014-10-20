@@ -1,4 +1,5 @@
 import numpy as np
+import random
 import urllib.request
 import json
 import itertools
@@ -131,6 +132,7 @@ class ManageData:
 			game = (splitted[2][1:-1], splitted[3][1:-1])
 			score = splitted[-1:][0][1:-1]
 			return game, score
+
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
 	startstat = data.find('defaultWsPlayerStatsConfigParams.defaultParams')+49
@@ -519,20 +521,20 @@ class TextGame:
 		targetevent = self._getGameUntilMinute(current, minute)
 		events = list(self._getGamesUntilMinute(minute))
 		distresult = self._distance(targetevent, events)
-		print(distresult.info, targetevent.info)
-		#clusterresult = self._clustering(targetevent, events)
+		#print(distresult.info, targetevent.info)
+		clusterresult = self._clustering(targetevent, events)
 
 	def _clustering(self, targetgame, games):
 		'''
 			Find similar games with clustering
 		'''
-		preparegames = list(map(lambda x: [i[1] for i in x], games))
-		preparegame = list(map(lambda x: x[1], targetgame))
+		preparegames = list(map(lambda x: [i[1] for i in x.data], games))
+		preparegame = list(map(lambda x: x[1], targetgame.data))
 		lables = list(range(len(games)))
-		print(games)
-		#clf = NearestCentroid()
-		#clf.fit(preparegames, lables)
-		#print(clf.predict(preparegame))
+		print(preparegame, lables)
+		clf = NearestCentroid()
+		clf.fit(preparegames, lables)
+		print(clf.predict(preparegame))
 
 	def _distance(self, targetevent, events):
 		'''
@@ -573,9 +575,8 @@ class TextGame:
 			for game in self.games:
 				yield self._getGameUntilMinute(game, minute)
 
-def GkToForward(player, gk):
-	''' Соотношение удара по воротам и отбитым мячам'''
-	if gk[0] == 0:
-		return 0
-	return player[0]/gk[0]
+
+def getRandomTeams():
+	manage = ManageData(path='../teams')
+	teams = list(manage.data['teams'].keys())
 

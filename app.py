@@ -9,6 +9,7 @@ import football_predict
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
+    	team1, team2 = football_predict.getRandomTeams()
     	return self.render('indexserver.html', title="Football data", items=["test"])
 
     def post(self):
