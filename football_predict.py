@@ -1,5 +1,4 @@
 import numpy as np
-import random
 import urllib.request
 import json
 import itertools
@@ -201,11 +200,14 @@ class OptimalTeam:
 		form_res = list(map(lambda x: int(x), formation.split('-')))
 		if len(form_res) != 3:
 			raise OptimalTeamException("Error in formation representation")
-		result['GK'] = [self._chooseGK(team)]
+		result['GK'] = self._chooseGK(team)
+		print(result, ...)
 		result['DF'] = self._chooseDefence(team, opteam, form_res[0])
+		'''print(result, ...)
 		result['MF'] = self._chooseMidfielder(team, form_res[1])
+		print(result, ...)
 		result['FW'] = self._chooseForward(team, opteam, form_res[2])
-		return result
+		return result'''
 
 	def _getParamValues(self, players, values):
 		return list(map(lambda x: [x[p] for p in values], players))
@@ -578,5 +580,18 @@ class TextGame:
 
 def getRandomTeams():
 	manage = ManageData(path='../teams')
-	teams = list(manage.data['teams'].keys())
+	teamdata = manage.data['teams']
+	teams = list(teamdata.keys())
+	team2, team1 = set(np.random.choice(teams,2))
+	ot = OptimalTeam(teamdata)
+	print(team2, team1)
+	result1 = ot.getOptimalTeam(team2, team1, '4-4-2')
+	print(result1, ...)
+	result2 = ot.getOptimalTeam(team1, team2, '4-4-2')
+	print(result2)
 
+def GkToForward(player, gk):
+	''' Соотношение удара по воротам и отбитым мячам'''
+	if gk[0] == 0:
+		return 0
+	return player[0]/gk[0]
