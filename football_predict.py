@@ -201,13 +201,10 @@ class OptimalTeam:
 		if len(form_res) != 3:
 			raise OptimalTeamException("Error in formation representation")
 		result['GK'] = self._chooseGK(team)
-		print(result, ...)
 		result['DF'] = self._chooseDefence(team, opteam, form_res[0])
-		'''print(result, ...)
 		result['MF'] = self._chooseMidfielder(team, form_res[1])
-		print(result, ...)
 		result['FW'] = self._chooseForward(team, opteam, form_res[2])
-		return result'''
+		return result
 
 	def _getParamValues(self, players, values):
 		return list(map(lambda x: [x[p] for p in values], players))
@@ -218,10 +215,13 @@ class OptimalTeam:
 		if type(pos) == builtins.list:
 			for p in pos:
 				players += getPlayersFromTeamByPos(self.teamdata, team, p)
+			pos = pos[0]
 		else:
 			players = list(getPlayersFromTeamByPos(self.teamdata, team, pos))
 
-		#params = ['TotalClearances', 'Rating', 'GameStarted', 'ManOfTheMatch', 'AerialWon']
+		if len(players) == 0:
+			players = self._getFromAnotherPos(team, pos, num, \
+				list(map(lambda x:x['LastName'], players)))
 		vecparams = self._getParamValues(players, params)
 		matr = np.array(vecparams)
 		if len(matr) > 0: return self._optimalPlayers(matr, np.argmax, num, players)
@@ -257,6 +257,7 @@ class OptimalTeam:
 			cent = 1
 			lf = 2
 		center = getMFCenter(self._getTargetPlayers, team,cent)
+		#Get midfielders left and right
 		lr = getMFL(self._getTargetPlayers, team, lf)
 		return center + lr
 
@@ -271,6 +272,15 @@ class OptimalTeam:
 		return result
 
 	def _chooseDefenceLR(self, team, num):
+		""" Choose Left flang and Right Defenders
+
+		arguments:
+		team - target team
+		num - number of defenders needed
+
+		return:
+		list of Optimal defenders(last names)
+		"""
 		result = []
 		if num == 1:
 			pass
@@ -279,26 +289,67 @@ class OptimalTeam:
 			params = ['KeyPasses', 'Dribbles', 'TotalPasses', 'Rating', 'OffsidesWon', \
 			'GameStarted']
 			playersL = list(getPlayersFromTeamByPos(self.teamdata, team, idv))
+			if len(playersL) == 0:
+				'''
+					In this case choose players from another position,
+					for example D(R) -> D(CR)
+				'''
+				playersL = self._getFromAnotherPos(team, idv, num, result)
+
+			#print("PLAYERS: ", list(map(lambda x: x['PositionShort'], self.teamdata[team])))
 			tomaxvalues = self._getParamValues(playersL, params)
 			maxv = self._optimalPlayers(np.array(tomaxvalues), np.argmax, 1, playersL)
 			return maxv.pop()
+		result.append(get('D(L)'))
+		result.append(get('D(R)'))
+		return result
 
-		return [get('D(L)')] + [get('D(R)')]
+	def _getFromAnotherPos(self, team, pos, num, stored):
+		"""
+		'plan b', get players from another positions
+			in case when no players in the target pos.
+
+			arguments:
+			team - target team
+			pos - current pos
+			num - number of players needed
+			stored - already chosen players
+
+			return: list of players(raw)
+
+			TODO: set ranking
+		"""
+		anotherpos = pos[0:pos.find('(')]
+		return list(filter(lambda x: anotherpos in x['PositionShort'] and\
+							             x['LastName'] not in stored
+			, self.teamdata[team]))[0:num]
+
 
 	def _chooseDefenceCenter(self, team, opteam, num):
 		players = list(getPlayersFromTeamByPos(self.teamdata, team, 'D(C)'))
 		params = ['TotalTackles', 'AerialWon', 'Rating','OffsidesWon','GameStarted',\
 		 'ShotsBlocked', 'LastName']
 		tomaxvalues = self._getParamValues(players, params)
-		tominvalues = self._getParamValues(players,['AerialLost','Dispossesed','Yellow'])
-		maxv = self._optimalPlayers(np.array(tomaxvalues), np.argmax, num, players)
-		minv = self._optimalPlayers(np.array(tominvalues), np.argmin, num, players)
+		tominvalues = self._getParamValues(players,['AerialLost','Dispossesed','Yellow', 'LastName'])
+		if len(tomaxvalues) > 1:
+			maxv = self._optimalPlayers(np.array(tomaxvalues), np.argmax, num, players)
+		else:
+			maxv = tomaxvalues[0][-1:]
+
+		if len(tominvalues) > 1:
+			minv = self._optimalPlayers(np.array(tominvalues), np.argmin, num, players)
+		else:
+			minv = tominvalues[0][-1:]
+
 		#if same players both in maxv and minv append in result list
 		data = list(set(maxv).intersection(set(minv)))
+		if len(data) < num:
+			return data + list(map(lambda x: x['LastName'], self._getFromAnotherPos(team, 'D(C)', num-len(data), data)))
 		#self._opteamOptimal(self.fwparams, opteam, players)
 		size = len(data)
 		if size == 2: return data
 		else: return data + list(filter(lambda x: x not in data, maxv))
+
 
 
 	def _chooseForward(self, team, opteam, num):
@@ -577,21 +628,3 @@ class TextGame:
 			for game in self.games:
 				yield self._getGameUntilMinute(game, minute)
 
-
-def getRandomTeams():
-	manage = ManageData(path='../teams')
-	teamdata = manage.data['teams']
-	teams = list(teamdata.keys())
-	team2, team1 = set(np.random.choice(teams,2))
-	ot = OptimalTeam(teamdata)
-	print(team2, team1)
-	result1 = ot.getOptimalTeam(team2, team1, '4-4-2')
-	print(result1, ...)
-	result2 = ot.getOptimalTeam(team1, team2, '4-4-2')
-	print(result2)
-
-def GkToForward(player, gk):
-	''' Соотношение удара по воротам и отбитым мячам'''
-	if gk[0] == 0:
-		return 0
-	return player[0]/gk[0]
