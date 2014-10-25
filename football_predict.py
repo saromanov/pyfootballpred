@@ -132,6 +132,7 @@ class ManageData:
 			score = splitted[-1:][0][1:-1]
 			return game, score
 
+
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
 	startstat = data.find('defaultWsPlayerStatsConfigParams.defaultParams')+49
@@ -149,6 +150,9 @@ def getPlayersFromTeamByPos(teamsdata, team, pos):
 
 def getPlayer(teamdata, lastname):
 	return list(filter(lambda x: x['LastName'] == lastname, teamdata))[0]
+
+def dataToNames(data):
+	return list(map(lambda x: x['LastName'], data))
 
 
 def getPos(sorttuple, player):
@@ -209,7 +213,7 @@ class OptimalTeam:
 	def _getParamValues(self, players, values):
 		return list(map(lambda x: [x[p] for p in values], players))
 
-	def _getTargetPlayers(self, team, num, pos, params):
+	def _getTargetPlayers(self, team, num, pos, params, stored=[]):
 		#print(list(map(lambda x:x['PositionShort'], self.teamdata[team])))
 		players = []
 		if type(pos) == builtins.list:
@@ -217,14 +221,24 @@ class OptimalTeam:
 				players += getPlayersFromTeamByPos(self.teamdata, team, p)
 			pos = pos[0]
 		else:
-			players = list(getPlayersFromTeamByPos(self.teamdata, team, pos))
+			players = list(filter(lambda x: x['LastName'] not in stored,
+				getPlayersFromTeamByPos(self.teamdata, team, pos)))
+
 
 		if len(players) == 0:
 			players = self._getFromAnotherPos(team, pos, num, \
 				list(map(lambda x:x['LastName'], players)))
 		vecparams = self._getParamValues(players, params)
 		matr = np.array(vecparams)
-		if len(matr) > 0: return self._optimalPlayers(matr, np.argmax, num, players)
+		if len(matr) > 0:
+			if len(matr) > num: 
+				return self._optimalPlayers(matr, np.argmax, num, players)
+			if len(matr) ==  num:
+				return list(map(lambda x: x['LastName'], players))
+			else:
+				another = self._getFromAnotherPos(team, pos, num, players)
+				return dataToNames(another)
+
 
 	def _chooseGK(self, team):
 		pos = 'GK'
@@ -240,10 +254,10 @@ class OptimalTeam:
 			params = ['Rating', 'TotalPasses', 'KeyPasses', 'GameStarted']
 			return func(team, num, pos, params)
 
-		def getMFL(func, team, num):
+		def getMFL(func, team, num, stored=[]):
 			pos = ['AM(LR)', 'AM(CLR)', 'AM(R)', 'AM(L)']
 			params = ['Rating', 'KeyPasses']
-			return func(team, num, pos, params)
+			return func(team, num, pos, params, stored)
 		result = []
 		cent = int(num)/2
 		lf = num - cent
@@ -258,7 +272,7 @@ class OptimalTeam:
 			lf = 2
 		center = getMFCenter(self._getTargetPlayers, team,cent)
 		#Get midfielders left and right
-		lr = getMFL(self._getTargetPlayers, team, lf)
+		lr = getMFL(self._getTargetPlayers, team, lf, center)
 		return center + lr
 
 	def _chooseDefence(self, team, opteam, num):
@@ -628,3 +642,21 @@ class TextGame:
 			for game in self.games:
 				yield self._getGameUntilMinute(game, minute)
 
+
+def getRandomTeams():
+	manage = ManageData(path='../teams')
+	teamdata = manage.data['teams']
+	teams = list(teamdata.keys())
+	team2, team1 = set(np.random.choice(teams,2))
+	ot = OptimalTeam(teamdata)
+	print(team2, team1)
+	result1 = ot.getOptimalTeam(team2, team1, '4-4-2')
+	print(result1, ...)
+	result2 = ot.getOptimalTeam(team1, team2, '4-4-2')
+	print(result2)
+
+def GkToForward(player, gk):
+	''' Соотношение удара по воротам и отбитым мячам'''
+	if gk[0] == 0:
+		return 0
+	return player[0]/gk[0]
