@@ -132,7 +132,6 @@ class ManageData:
 			score = splitted[-1:][0][1:-1]
 			return game, score
 
-
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
 	startstat = data.find('defaultWsPlayerStatsConfigParams.defaultParams')+49
@@ -213,16 +212,21 @@ class OptimalTeam:
 	def _getParamValues(self, players, values):
 		return list(map(lambda x: [x[p] for p in values], players))
 
+	def _filterUsed(self, players, stored):
+		""" Reject players wich alread in stored """
+		return list(filter(lambda x: x['LastName'] not in stored, players))
+
 	def _getTargetPlayers(self, team, num, pos, params, stored=[]):
 		#print(list(map(lambda x:x['PositionShort'], self.teamdata[team])))
 		players = []
 		if type(pos) == builtins.list:
 			for p in pos:
-				players += getPlayersFromTeamByPos(self.teamdata, team, p)
+				players += self._filterUsed(
+					getPlayersFromTeamByPos(self.teamdata, team, p), stored)
 			pos = pos[0]
 		else:
-			players = list(filter(lambda x: x['LastName'] not in stored,
-				getPlayersFromTeamByPos(self.teamdata, team, pos)))
+			players = self._filterUsed(\
+				getPlayersFromTeamByPos(self.teamdata, team, pos), stored)
 
 
 		if len(players) == 0:
@@ -649,11 +653,9 @@ def getRandomTeams():
 	teams = list(teamdata.keys())
 	team2, team1 = set(np.random.choice(teams,2))
 	ot = OptimalTeam(teamdata)
-	print(team2, team1)
 	result1 = ot.getOptimalTeam(team2, team1, '4-4-2')
-	print(result1, ...)
 	result2 = ot.getOptimalTeam(team1, team2, '4-4-2')
-	print(result2)
+	return ((team2, result1), (team1, result2))
 
 def GkToForward(player, gk):
 	''' Соотношение удара по воротам и отбитым мячам'''

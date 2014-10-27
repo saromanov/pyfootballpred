@@ -8,18 +8,30 @@ import football_predict
 
 
 class MainHandler(tornado.web.RequestHandler):
+    @tornado.web.asynchronous
     def get(self):
-    	team1, team2 = football_predict.getRandomTeams()
-    	return self.render('indexserver.html', title="Football data", items=["test"])
+        #Demonstration
+        team1, team2 = football_predict.getRandomTeams()
+        name1 = team1[0]
+        players1 = list(team1[1].values())
+        name2 = team2[0]
+        players2 = list(team2[1].values())
+        return self.render('index.html', title="Football data", \
+        	name1=name1, name2=name2, players1=players1,players2=players2)
 
     def post(self):
     	self.set_header("Content-Type", "text/plain")
 
 
+class PredictHandler(tornado.web.RequestHandler):
+	def get(self):
+		pass
+
+
 
 application = tornado.web.Application([
     (r"/", MainHandler),
-    (r"/fun", AnotherHandler)
+    (r"/predict", PredictHandler)
 ])
 
 if __name__ == "__main__":
