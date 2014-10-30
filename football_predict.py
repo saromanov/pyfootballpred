@@ -99,8 +99,38 @@ class ManageData:
 		withoutzero = lambda data: data[2] == team and data[0] != 0
 		bestresults = self.getBest(param)
 		containszero = kwargs.get('containszero', True)
-		return [(num, player[0], player[1]) for num, player in enumerate(bestresults) \
+		return [(num+1, player[0], player[1]) for num, player in enumerate(bestresults) \
 		if startdard(player[2])]
+
+	def _preparegetBestByAllParams(self, params):
+		team = params['team']
+		if team != None and team in self.teams:
+			return team, self.teams[team]
+		if params['players'] != None:
+			""" Return tuple """
+			return params['players']
+
+	def getBestByAllParams(self, *args,**kwargs):
+		""" Get best player by all params
+		"""
+		team, params = self._preparegetBestByAllParams(kwargs)
+		bestparam = 9999
+		result = None
+		params = list(params[0].keys())
+		[params.remove(param) for param in ['Name', 'LastName', 'FirstName',\
+			'TeamName','PlayedPositionsRaw','TeamId', 'DateOfBirth','PlayerId',\
+			'WSName', 'KnownName', 'IsCurrentPlayer','PositionShort',\
+			'PositionText','TeamRegionCode','PositionLong']]
+		for param in params:
+			try:
+				best = self.getBestByTeam(param, team)[0]
+				if best[0] < bestparam:
+					bestparam = best[0]
+					result = (param, best)
+			except Exception as e:
+				pass
+		return result
+
 
 	def parseOnlineTextGame(self, url):
 		'''
@@ -143,6 +173,7 @@ class ManageData:
 			game = (splitted[2][1:-1], splitted[3][1:-1])
 			score = splitted[-1:][0][1:-1]
 			return game, score
+
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
 	startstat = data.find('defaultWsPlayerStatsConfigParams.defaultParams')+49
@@ -656,4 +687,15 @@ class TextGame:
 		if self.games != None:
 			for game in self.games:
 				yield self._getGameUntilMinute(game, minute)
+
+
+def getRandomTeams():
+	manage = ManageData(path='../teams')
+	teamdata = manage.data['teams']
+	teams = list(teamdata.keys())
+	team2, team1 = set(np.random.choice(teams,2))
+	ot = OptimalTeam(teamdata)
+	result1 = ot.getOptimalTeam(team2, team1, '4-4-2')
+	result2 = ot.getOptimalTeam(team1, team2, '4-4-2')
+	return ((team2, result1), (team1, result2))
 
