@@ -90,6 +90,18 @@ class ManageData:
 			limit = len(values)
 		return list(reversed(sorted(values)))[0:limit]
 
+	def getBestByTeam(self, param ,team, *args, **kwargs):
+		""" Return list of tuple of (player, position in rating) by param
+
+			contains zero - contains player which have a zero points in param 
+		"""
+		startdard = lambda playerteam: playerteam == team
+		withoutzero = lambda data: data[2] == team and data[0] != 0
+		bestresults = self.getBest(param)
+		containszero = kwargs.get('containszero', True)
+		return [(num, player[0], player[1]) for num, player in enumerate(bestresults) \
+		if startdard(player[2])]
+
 	def parseOnlineTextGame(self, url):
 		'''
 			http://www.whoscored.com/Matches/829535/Live
@@ -131,7 +143,6 @@ class ManageData:
 			game = (splitted[2][1:-1], splitted[3][1:-1])
 			score = splitted[-1:][0][1:-1]
 			return game, score
-
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
 	startstat = data.find('defaultWsPlayerStatsConfigParams.defaultParams')+49
@@ -470,7 +481,6 @@ class Statistics:
 			p.start()
 			p.join()
 			result = q.get()
-			print(result)
 		return result
 
 	def _compareByPos(self, q):
@@ -511,6 +521,7 @@ class Statistics:
 	def comparePlayers(self, data1, data2):
 		'''
 			Format for data1 and for data2 is tuple (team, lastname)
+			"Head to Head"
 		'''
 		team1, player1 = data1
 		team2, player2 = data2
@@ -646,19 +657,3 @@ class TextGame:
 			for game in self.games:
 				yield self._getGameUntilMinute(game, minute)
 
-
-def getRandomTeams():
-	manage = ManageData(path='../teams')
-	teamdata = manage.data['teams']
-	teams = list(teamdata.keys())
-	team2, team1 = set(np.random.choice(teams,2))
-	ot = OptimalTeam(teamdata)
-	result1 = ot.getOptimalTeam(team2, team1, '4-4-2')
-	result2 = ot.getOptimalTeam(team1, team2, '4-4-2')
-	return ((team2, result1), (team1, result2))
-
-def GkToForward(player, gk):
-	''' Соотношение удара по воротам и отбитым мячам'''
-	if gk[0] == 0:
-		return 0
-	return player[0]/gk[0]
