@@ -103,17 +103,23 @@ class ManageData:
 		if startdard(player[2])]
 
 	def _preparegetBestByAllParams(self, params):
-		team = params['team']
-		if team != None and team in self.teams:
+		if 'team' in params and team != None and team in self.teams:
 			return team, self.teams[team]
-		if params['players'] != None:
+		if 'players' in params:
 			""" Return tuple """
-			return params['players']
+			result = params['players']
+			return result[0], \
+			list(map(lambda x: getPlayer(self.teams[result[0]],x), \
+				functools.reduce(list.__add__, \
+					list(result[1].values()),[])
+				)
+			)
 
 	def getBestByAllParams(self, *args,**kwargs):
-		""" Get best player by all params
+		""" Get best player by value, ...all params
 		"""
 		team, params = self._preparegetBestByAllParams(kwargs)
+		print(team, params, ...)
 		bestparam = 9999
 		result = None
 		params = list(params[0].keys())
@@ -698,4 +704,10 @@ def getRandomTeams():
 	result1 = ot.getOptimalTeam(team2, team1, '4-4-2')
 	result2 = ot.getOptimalTeam(team1, team2, '4-4-2')
 	return ((team2, result1), (team1, result2))
+
+def GkToForward(player, gk):
+	''' Соотношение удара по воротам и отбитым мячам'''
+	if gk[0] == 0:
+		return 0
+	return player[0]/gk[0]
 
