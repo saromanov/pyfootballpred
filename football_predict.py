@@ -19,23 +19,28 @@ teamsIds = ['26','167','15','13','31','32','18','162','30','23','96','259','29',
 
 #http://www.whoscored.com/Teams/32
 
+def loadFromUrl(url):
+	opener = urllib.request.build_opener()
+	opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+	urllib.request.install_opener(opener)
+	response = urllib.request.urlopen(url)
+	return response.read().decode(response.headers.get_content_charset())
+
 #Data parse from http://www.whoscored.com
 class ManageData:
 	def __init__(self, *args, **kwargs):
 		url = kwargs.get('url')
 		path = kwargs.get('path')
+		self.data = None
 		if url != None:
 			self.data = self._readData(url)
 		if path != None:
 			self.data = self._loadData(path)
-		self.teams = self.data['teams']
+		if self.data != None:
+			self.teams = self.data['teams']
 
 	def _readData(self, url):
-		opener = urllib.request.build_opener()
-		opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-		urllib.request.install_opener(opener)
-		response = urllib.request.urlopen(url)
-		return response.read().decode(response.headers.get_content_charset())
+		return loadFromUrl(url)
 
 
 	#load data from json file file
@@ -160,8 +165,6 @@ class ManageData:
 					result.append((mins, typeevent, splitdata[2]))
 				except Exception as e:
 					pass
-			#game, score = self._getHeaderofGame(data)
-			#print(result, self._getHeaderofGame(data))
 			return result, self._getHeaderofGame(data)
 
 	def _getHeaderofGame(self, data):
@@ -695,15 +698,54 @@ class TextGame:
 				yield self._getGameUntilMinute(game, minute)
 
 
-def getRandomTeams():
+class CollectMatches:
+	""" Collect all matches """
+	def __init__(self, *args, **kwargs):
+		""" Or or preloaded data """
+		self.url = kwargs.get('url')
+		if self.url != None:
+			self.iddata = list(self._parseData())[1:]
+		else:
+			self.data = kwargs.get('data')
+
+	def _parseData(self):
+		if self.url != None:
+			result = loadFromUrl(self.url)
+			target = "DataStore.prime('standings'"
+			subpos = result.find(target)
+			if subpos != -1:
+				rawdata = result[subpos + len(target)+21
+				: result.find(']);', subpos)]
+				res = 0
+				for idvalue in rawdata.split('id="'):
+					yield idvalue.split('" ')[0]
+
+	def output(self, path):
+		""" Output collected data at the path in pretty format
+		"""
+		mandata = ManageData()
+		constructurl = lambda num: 'http://www.whoscored.com/Matches/{0}/LiveOld/'\
+									.format(num)
+		testresult = mandata.parseOnlineTextGame(constructurl(self.iddata[0]))
+		print(testresult, ...)
+		if self.iddata != None:
+			for idvalue in self.iddata:
+				pass
+
+def getData():
 	manage = ManageData(path='../teams')
 	teamdata = manage.data['teams']
+
+def getRandomTeams(teamdata):
 	teams = list(teamdata.keys())
 	team2, team1 = set(np.random.choice(teams,2))
 	ot = OptimalTeam(teamdata)
 	result1 = ot.getOptimalTeam(team2, team1, '4-4-2')
 	result2 = ot.getOptimalTeam(team1, team2, '4-4-2')
 	return ((team2, result1), (team1, result2))
+
+def getBests(teamdata):
+	pass
 
 def GkToForward(player, gk):
 	''' Соотношение удара по воротам и отбитым мячам'''
