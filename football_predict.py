@@ -718,7 +718,12 @@ class CollectMatches:
 				: result.find(']);', subpos)]
 				res = 0
 				for idvalue in rawdata.split('id="'):
-					yield idvalue.split('" ')[0]
+					splitter = idvalue.split('" ')
+					titledata = "'title="
+					titlesplitter = splitter[1].split('/>')[0]
+					ident = titlesplitter[len(titledata):-1].split()
+					if len(ident) > 0:
+						yield ((ident[0], ident[2], ident[1]), idvalue.split('" ')[0])
 
 	def output(self, path):
 		""" Output collected data at the path in pretty format
@@ -726,11 +731,12 @@ class CollectMatches:
 		mandata = ManageData()
 		constructurl = lambda num: 'http://www.whoscored.com/Matches/{0}/LiveOld/'\
 									.format(num)
-		testresult = mandata.parseOnlineTextGame(constructurl(self.iddata[0]))
-		print(testresult, ...)
+		#testresult = mandata.parseOnlineTextGame(constructurl(self.iddata[0][1]))
+		resultsata = {}
+		#print(testresult, ...)
 		if self.iddata != None:
 			for idvalue in self.iddata:
-				pass
+				print(idvalue, ...)
 
 def getData():
 	manage = ManageData(path='../teams')
@@ -752,4 +758,3 @@ def GkToForward(player, gk):
 	if gk[0] == 0:
 		return 0
 	return player[0]/gk[0]
-
