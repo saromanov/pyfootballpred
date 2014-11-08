@@ -182,7 +182,6 @@ class ManageData:
 			game = (splitted[2][1:-1], splitted[3][1:-1])
 			score = splitted[-1:][0][1:-1]
 			return game, score
-
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
 	startstat = data.find('defaultWsPlayerStatsConfigParams.defaultParams')+49
@@ -706,7 +705,7 @@ class CollectMatches:
 		if self.url != None:
 			self.iddata = list(self._parseData())[1:]
 		else:
-			self.data = kwargs.get('data')
+			self.data = self._loadMatches(kwargs.get('data'))
 
 	def _parseData(self):
 		if self.url != None:
@@ -721,9 +720,13 @@ class CollectMatches:
 					splitter = idvalue.split('" ')
 					titledata = "'title="
 					titlesplitter = splitter[1].split('/>')[0]
+					print(titlesplitter, ...)
 					ident = titlesplitter[len(titledata):-1].split()
 					if len(ident) > 0:
 						yield ((ident[0], ident[2], ident[1]), idvalue.split('" ')[0])
+
+	def _loadMatches(self, path):
+		return json.loads(open(path, 'r').read())
 
 	def output(self, path):
 		""" Output collected data at the path in pretty format
@@ -731,12 +734,14 @@ class CollectMatches:
 		mandata = ManageData()
 		constructurl = lambda num: 'http://www.whoscored.com/Matches/{0}/LiveOld/'\
 									.format(num)
-		#testresult = mandata.parseOnlineTextGame(constructurl(self.iddata[0][1]))
 		resultsata = {}
-		#print(testresult, ...)
 		if self.iddata != None:
-			for idvalue in self.iddata:
-				print(idvalue, ...)
+			restricted = self.iddata[0:3]
+			#print("THIS IS RESTRICTED: ", restricted, ...)
+			for idvalue in restricted:
+				resultsata[' '.join(idvalue[0])] = mandata.parseOnlineTextGame(constructurl(idvalue[1]))
+		with open(path,'w') as outfile:
+			json.dump(resultsata, outfile)
 
 def getData():
 	manage = ManageData(path='../teams')
