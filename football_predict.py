@@ -182,6 +182,7 @@ class ManageData:
 			game = (splitted[2][1:-1], splitted[3][1:-1])
 			score = splitted[-1:][0][1:-1]
 			return game, score
+
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
 	startstat = data.find('defaultWsPlayerStatsConfigParams.defaultParams')+49
@@ -194,13 +195,20 @@ def getActivity():
 		print(d.find('defaultWsPlayerStatsConfigParams.defaultParams'))'''
 
 def getPlayersFromTeamByPos(teamsdata, team, pos):
+	""" Return all players in target pos.
+	For example all forwards from team """
 	return list(filter(lambda x: x['PositionShort'] == pos, teamsdata[team]))
 
 
 def getPlayer(teamdata, lastname):
+	""" 
+	teamdata - dict with all teams
+	Return target player from team by last name """
 	return list(filter(lambda x: x['LastName'] == lastname, teamdata))[0]
 
 def dataToNames(data):
+	""" Change list with params to only last name
+	"""
 	return list(map(lambda x: x['LastName'], data))
 
 
@@ -267,7 +275,6 @@ class OptimalTeam:
 		return list(filter(lambda x: x['LastName'] not in stored, players))
 
 	def _getTargetPlayers(self, team, num, pos, params, stored=[]):
-		#print(list(map(lambda x:x['PositionShort'], self.teamdata[team])))
 		players = []
 		if type(pos) == builtins.list:
 			for p in pos:
@@ -295,6 +302,8 @@ class OptimalTeam:
 
 
 	def _chooseGK(self, team):
+		""" Choose optimal Goalkeeper
+		"""
 		pos = 'GK'
 		players = list(getPlayersFromTeamByPos(self.teamdata, team, pos))
 		params = ['TotalClearances', 'Rating', 'GameStarted', 'ManOfTheMatch', 'AerialWon']
