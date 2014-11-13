@@ -182,6 +182,7 @@ class ManageData:
 			game = (splitted[2][1:-1], splitted[3][1:-1])
 			score = splitted[-1:][0][1:-1]
 			return game, score
+
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
 	startstat = data.find('defaultWsPlayerStatsConfigParams.defaultParams')+49
@@ -705,36 +706,19 @@ class TextGame:
 				yield self._getGameUntilMinute(game, minute)
 
 
-class LiveGameAnalysisException(Exception):
-	pass
-
-class LiveGameAnalysis:
-	""" Analysis from life text report of the game """
-	def __init__(self, *args, **kwargs):
-		self.data = self._collectMatches(kwargs)
-		if self.data == None:
-			raise LiveGameAnalysisException("Can't load data for analysis")
-		self.stat = Statistics(self.data)
-
-	def _collectMatches(self, param):
-		return CollectMatches(param).result()
-
 class CollectMatches:
-	""" Collect all matches from web"""
-	def __init__(self, param):
+	""" Collect all matches """
+	def __init__(self, *args, **kwargs):
 		""" Or or preloaded data """
-		self.data=None
-		if 'url' in param:
-			path = './matches'
-			self.iddata = list(self._parseData(param['url']))[1:]
-			self.output(path)
-			self.data = self._loadMatches(path)
-		elif 'data' in param:
-			self.data = self._loadMatches(param['data'])
+		self.url = kwargs.get('url')
+		if self.url != None:
+			self.iddata = list(self._parseData())[1:]
+		else:
+			self.data = self._loadMatches(kwargs.get('data'))
 
-	def _parseData(self, url):
-		if url != None:
-			result = loadFromUrl(url)
+	def _parseData(self):
+		if self.url != None:
+			result = loadFromUrl(self.url)
 			target = "DataStore.prime('standings'"
 			subpos = result.find(target)
 			if subpos != -1:
@@ -745,12 +729,10 @@ class CollectMatches:
 					splitter = idvalue.split('" ')
 					titledata = "'title="
 					titlesplitter = splitter[1].split('/>')[0]
+					print(titlesplitter, ...)
 					ident = titlesplitter[len(titledata):-1].split()
 					if len(ident) > 0:
 						yield ((ident[0], ident[2], ident[1]), idvalue.split('" ')[0])
-
-	def result(self):
-		return self.data
 
 	def _loadMatches(self, path):
 		return json.loads(open(path, 'r').read())
@@ -761,11 +743,10 @@ class CollectMatches:
 		mandata = ManageData()
 		constructurl = lambda num: 'http://www.whoscored.com/Matches/{0}/LiveOld/'\
 									.format(num)
-		iddata = self.iddata[:3]
 		resultsata = {}
-		resultsata['games'] = {}
 		if self.iddata != None:
 			restricted = self.iddata[0:3]
+			#print("THIS IS RESTRICTED: ", restricted, ...)
 			for idvalue in restricted:
 				resultsata[' '.join(idvalue[0])] = mandata.parseOnlineTextGame(constructurl(idvalue[1]))
 		with open(path,'w') as outfile:
@@ -791,90 +772,3 @@ def GkToForward(player, gk):
 	if gk[0] == 0:
 		return 0
 	return player[0]/gk[0]
-
-def testOptimalTeam():
-	manage = ManageData(path='../teams')
-	teams = manage.data['teams']
-	opt = OptimalTeam(teams)
-	print(opt.getOptimalTeam('Everton', 'CheAutolsea', '4-4-2'))
-
-def testOptimalTeam2():
-	team1 = 'Norwich'
-	manage = ManageData(path='../teams')
-	teams = manage.data['teams']
-	opt = OptimalTeam(teams)
-	print(opt.getOptimalTeam(team1, 'Chelsea', '4-4-2'))
-
-def testOptimalTeam3():
-	team1 = 'Stoke'
-	manage = ManageData(path='../teams')
-	teams = manage.data['teams']
-	opt = OptimalTeam(teams)
-	print(opt.getOptimalTeam(team1, 'Crystal Palace', '4-4-2'))
-
-def testOptimalTeam4():
-	team1 = 'Manchester United'
-	manage = ManageData(path='../teams')
-	teams = manage.data['teams']
-	opt = OptimalTeam(teams)
-	print(opt.getOptimalTeam(team1, 'Crystal Palace', '4-4-2'))
-
-def testComparePlayers():
-	manage = ManageData(path='../teams')
-	teams = manage.data['teams']
-	stat = Statistics(teams)
-	stat.comparePlayers(('Chelsea', 'Hazard'), ('Tottenham', 'Lennon'))
-
-def testCompareTeams():
-	manage = ManageData(path='../teams')
-	teams = manage.data['teams']
-	stat = Statistics(teams)
-	p1 = getPlayer(teams['Chelsea'], 'Hazard')
-	p2 = getPlayer(teams['Liverpool'], 'Suárez')
-	print(stat.compareInner(p1, p2))
-
-
-def testLiveMatch():
-	games = ['http://www.whoscored.com/Matches/829620/LiveOld/', 'http://www.whoscored.com/Matches/829556/LiveOld/']
-	url = 'http://www.whoscored.com/Matches/713513/LiveOld/'
-	manage = ManageData(path='../teams')
-	teams = manage.data['teams']
-	#Match was parsed
-	ta = TextGame([manage.parseOnlineTextGame(games[0]), manage.parseOnlineTextGame(games[1])])
-	#ta.extractInfo(manage.parseOnlineTextGame(url), 'Manchester United')
-	ta.similarGames(manage.parseOnlineTextGame(url), None, 'Manchester United', 40)
-
-
-def testRandomTeams():
-	manage = ManageData(path='../teams')
-	teams = manage.data['teams']
-	choiceteams = getRandomTeams(teams)
-	print(choiceteams)
-
-def testGetBest():
-	manage = ManageData(path='../teams')
-	#print(manage.getBest('Fouls'))
-	print(manage.getBestByTeam('Fouls', 'Arsenal'))
-
-def testGetByallParams():
-	manage = ManageData(path="../teams")
-	print(manage.getBestByAllParams(team='Cardiff'))
-
-
-def testGetByallParamsOptimal():
-	manage = ManageData(path="../teams")
-	print("RAND TEAMS: ", getRandomTeams())
-	manage.getBestByAllParams(players=getRandomTeams()[0])
-
-def test_analyzeweek():
-	aweek = CollectMatches(url='http://www.whoscored.com/Regions/252/Tournaments/2/Seasons/3853')
-	aweek.output('../matches')
-
-def test_analyzeweek2():
-	""" TEst for load games """
-	aweek = CollectMatches(data='../matches')
-
-def test_livegameanalysis():
-	lga = LiveGameAnalysis(url='http://www.whoscored.com/Regions/252/Tournaments/2/Seasons/3853')
-
-
