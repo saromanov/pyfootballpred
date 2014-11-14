@@ -719,6 +719,48 @@ class LiveGameAnalysis:
 	def _collectMatches(self, param):
 		return CollectMatches(param).result()
 
+	def mostFreqEvents(self, startmin,  endmin, *args, **kwargs):
+		""" Get Most frequent events from startmin until endmin 
+			sample - Get sample from n games
+		"""
+		if( isinstance(startmin, int) != True or isinstance(endmin, int) != True):
+			raise LiveGameAnalysisException("Time need to be in int format")
+		if(startmin > endmin):
+			raise LiveGameAnalysisException("Starttime can't be greather then endtime")
+		sample = kwargs.get('sample')
+		if sample != None:
+			return self._sampleCase(startmin, endmin, self.data, sample)
+		preresult = []
+		sampledata = kwargs.get('data')
+		data = self.data if sampledata == None else sampledata
+		for game in data:
+			if len(data[game]) > 0:
+				filtering = list(
+					map(lambda x: x[1], 
+					filter(lambda x: x[0] >= startmin and x[0] <= endmin,\
+					self.data[game][0])))
+				preresult += filtering
+		if len(preresult) > 0:
+			limit = kwargs.get('limit',0)
+			count = Counter(preresult)
+			self._sampleCase(self.data, 3)
+			lim = len(preresult) if limit == 0 else limit
+			return count.most_common()[0:lim]
+
+	def _sampleCase(self, startmin, endmin, data, size):
+		""" Return random sample with size in data"""
+		sto = list(map(lambda x: data[x], data))
+		sampledata = np.random.choice(sto,size)
+		result = []
+		for game in sampledata:
+			if len(game) > 0:
+				result += list(
+						map(lambda x: x[1], 
+						filter(lambda x: x[0] >= startmin and x[0] <= endmin,\
+						game[0])))
+		return Counter(result).most_common()
+
+
 class CollectMatches:
 	""" Collect all matches from web"""
 	def __init__(self, param):
@@ -765,7 +807,7 @@ class CollectMatches:
 		resultsata = {}
 		resultsata['games'] = {}
 		if self.iddata != None:
-			restricted = self.iddata[0:3]
+			restricted = self.iddata[0:15]
 			for idvalue in restricted:
 				resultsata[' '.join(idvalue[0])] = mandata.parseOnlineTextGame(constructurl(idvalue[1]))
 		with open(path,'w') as outfile:
