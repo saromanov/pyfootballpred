@@ -17,6 +17,9 @@ from sklearn.neighbors.nearest_centroid import NearestCentroid
 teamsIds = ['26','167','15','13','31','32','18','162','30','23','96','259','29','175','24',
 '214','16','170','168','188']
 
+
+#TODO: Fix bug with teams with two words. For example: Manchester United
+
 #http://www.whoscored.com/Teams/32
 
 def loadFromUrl(url):
@@ -743,12 +746,13 @@ class LiveGameAnalysis:
 		if len(preresult) > 0:
 			limit = kwargs.get('limit',0)
 			count = Counter(preresult)
-			self._sampleCase(self.data, 3)
 			lim = len(preresult) if limit == 0 else limit
 			return count.most_common()[0:lim]
 
 	def _sampleCase(self, startmin, endmin, data, size):
-		""" Return random sample with size in data"""
+		""" Return random sample with size in data
+			with 
+		"""
 		sto = list(map(lambda x: data[x], data))
 		sampledata = np.random.choice(sto,size)
 		result = []
@@ -760,6 +764,29 @@ class LiveGameAnalysis:
 						game[0])))
 		return Counter(result).most_common()
 
+	def _findGameByTitle(self, title):
+		""" Find game by title
+			For example Arsenal - Chelsea
+			TODO: Fix search
+		"""
+		prepared = title.split('-')
+		datagames = list(filter(lambda x: len(self.data[x]) > 0 \
+			and self.data[x][1][0][0] == prepared[0] \
+			and self.data[x][1][0][1] == prepared[1],\
+			self.data))
+		return datagames
+
+	def similarGames(self, startmin, endmin):
+		self._findGameByTitle('Arsenal-Manchester City')
+
+
+class Finder:
+	""" Find games with natural language
+		Fox example "interesting game" or "game with many yellow cards"
+		TODO
+	"""
+	def __init__(self):
+		pass
 
 class CollectMatches:
 	""" Collect all matches from web"""
