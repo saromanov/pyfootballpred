@@ -405,6 +405,7 @@ class OptimalTeam:
 
 
 	def _chooseDefenceCenter(self, team, opteam, num):
+		""" Get optimal Defender to center """
 		players = list(getPlayersFromTeamByPos(self.teamdata, team, 'D(C)'))
 		params = ['TotalTackles', 'AerialWon', 'Rating','OffsidesWon','GameStarted',\
 		 'ShotsBlocked', 'LastName']
@@ -709,6 +710,7 @@ class TextGame:
 
 
 class LiveGameAnalysisException(Exception):
+	""" Exception for LiveGameAnalysis class """
 	pass
 
 class LiveGameAnalysis:
@@ -720,6 +722,7 @@ class LiveGameAnalysis:
 		self.stat = Statistics(self.data)
 
 	def _collectMatches(self, param):
+		""" Collect games by some param """
 		return CollectMatches(param).result()
 
 	def mostFreqEvents(self, startmin,  endmin, *args, **kwargs):
@@ -777,6 +780,7 @@ class LiveGameAnalysis:
 		return datagames
 
 	def similarGames(self, startmin, endmin):
+		""" Find similar games with TextGame class """
 		self._findGameByTitle('Arsenal-Manchester City')
 
 
