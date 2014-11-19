@@ -642,29 +642,32 @@ class TextGame:
 		minuts = list(self._getGamesUntilMinute(25))
 
 	#Need to append compare games in live
-	def similarGames(self, current, data, team, minute):
+	def similarGames(self, current, data, minute, endmin=0):
 		''' Проходим по всем матчам в базе и ищем наиболее похожие
 			Нужна нормализация по минутам
 			current - this game
 			data - target data
-			team - this team
 			minute - until this minute
 		'''
 		#Get all games untill current minute
-		targetevent = self._getGameUntilMinute(current, minute)
+		if endmin != 0:
+			targetevent = self._getBetweenMinutes(current, 15, 20)
+		else:
+			targetevent = self._getGameUntilMinute(current, minute)
 		events = list(self._getGamesUntilMinute(minute))
 		distresult = self._distance(targetevent, events)
 		#print(distresult.info, targetevent.info)
-		clusterresult = self._clustering(targetevent, events)
+		#clusterresult = self._clustering(targetevent, events)
+		return distresult
 
 	def _clustering(self, targetgame, games):
 		'''
 			Find similar games with clustering
+			TODO
 		'''
 		preparegames = list(map(lambda x: [i[1] for i in x.data], games))
 		preparegame = list(map(lambda x: x[1], targetgame.data))
 		lables = list(range(len(games)))
-		print(preparegame, lables)
 		clf = NearestCentroid()
 		clf.fit(preparegames, lables)
 		print(clf.predict(preparegame))
@@ -700,6 +703,12 @@ class TextGame:
 		data, info = game
 		return Game(list(reversed(list(itertools.dropwhile(lambda x: x[0] >= minute, data)))), info)
 
+	def _getBetweenMinutes(self, game, startmin, endmin):
+		""" Get game between startmin and endmin """
+		data, info = game
+		return Game(list(reversed(list(filter(lambda x: x[0] >= startmin and \
+			x[0] <= endmin, data)))), info)
+
 	def _getGamesUntilMinute(self, minute):
 		'''
 			Get games before n minutes
@@ -720,6 +729,7 @@ class LiveGameAnalysis:
 		if self.data == None:
 			raise LiveGameAnalysisException("Can't load data for analysis")
 		self.stat = Statistics(self.data)
+		self.textgame = TextGame(self.data)
 
 	def _collectMatches(self, param):
 		""" Collect games by some param """
@@ -773,15 +783,26 @@ class LiveGameAnalysis:
 			TODO: Fix search
 		"""
 		prepared = title.split('-')
-		datagames = list(filter(lambda x: len(self.data[x]) > 0 \
+		#Pretty bad solution
+		for dat in self.data:
+			target = self.data[dat]
+			if len(target) > 0: 
+				teams = self.data[dat][1][0]
+				if teams[0] == prepared[0] and teams[1] == prepared[1]:
+					return self.data[dat]
+		'''datagames = list(filter(lambda x: len(self.data[x]) > 0 \
 			and self.data[x][1][0][0] == prepared[0] \
 			and self.data[x][1][0][1] == prepared[1],\
 			self.data))
-		return datagames
+		return datagames'''
 
-	def similarGames(self, startmin, endmin):
+	def similarGames(self, title, startmin, endmin):
 		""" Find similar games with TextGame class """
-		self._findGameByTitle('Arsenal-Manchester City')
+		if startmin > endmin:
+			raise LiveGameAnalysisException("Starttime can't be geather then endmin")
+		#self.textgame.similarGames(current, data, minute)
+		result = self._findGameByTitle(title)
+		print(result, ...)
 
 
 class Finder:
