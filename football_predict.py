@@ -788,9 +788,22 @@ class Finder:
 	""" Find games with natural language
 		Fox example "interesting game" or "game with many yellow cards"
 		TODO
+		Finder("yellow cards").ident(>5)
 	"""
-	def __init__(self):
+	def __init__(self, data, findclass=None):
+		self.data = data
+		if findclass != None:
+			pass
+
+	def query(self, value):
+		if len(value) == 0:
+			raise Exception("THis query is empty")
+		return Finder(data, value)
+
+	def ident(self, value):
+		""" can be >,<,=,>=,<= """
 		pass
+
 
 class CollectMatches:
 	""" Collect all matches from web"""
