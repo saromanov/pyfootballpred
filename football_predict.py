@@ -821,8 +821,17 @@ class LiveGameAnalysis:
 		for name in self.data:
 			evt = self.data[name]
 			if len(evt) > 0:
+				if endmin == 0 and startmin != 0:
+					#Not tested!
+					count_events = len(list(lambda x: x[1] ==  event and \
+						x[0] <= startmin, evt[0]))
 				count_events = len(list(filter(lambda x: x[1] == event, evt[0])))
 				yield(evt[1], count_events)
+
+class FinderHelpful:
+	def __init__(self, teams, matches):
+		self.teams = teams
+		self.matches = matches
 
 class Finder:
 	""" Find games with natural language
@@ -831,9 +840,15 @@ class Finder:
 		Finder("yellow cards").ident(>5)
 	"""
 	def __init__(self, data, findclass=None):
-		self.data = data
-		if findclass != None:
-			pass
+		if findclass == None:
+			""" Load basic classes """
+			manage = ManageData(path='../teams')
+			teams = manage.data['teams']
+			lga = LiveGameAnalysis(data='./matches')
+			self.data = FinderHelpful(teams, lga)
+		else:
+			#This is FinderHelpful object
+			self.data = data
 
 	def query(self, value):
 		if len(value) == 0:
@@ -842,6 +857,12 @@ class Finder:
 
 	def ident(self, value):
 		""" can be >,<,=,>=,<= """
+		pass
+
+	def greater(self, param):
+		pass
+
+	def less(self, param):
 		pass
 
 
