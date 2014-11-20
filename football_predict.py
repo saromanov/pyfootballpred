@@ -642,20 +642,20 @@ class TextGame:
 		minuts = list(self._getGamesUntilMinute(25))
 
 	#Need to append compare games in live
-	def similarGames(self, current, data, minute, endmin=0):
+	def similarGames(self, current, minute, endmin=0):
 		''' Проходим по всем матчам в базе и ищем наиболее похожие
 			Нужна нормализация по минутам
 			current - this game
-			data - target data
 			minute - until this minute
 		'''
 		#Get all games untill current minute
 		if endmin != 0:
-			targetevent = self._getBetweenMinutes(current, 15, 20)
+			targetevent = self._getBetweenMinutes(current, minute, endmin)
 		else:
 			targetevent = self._getGameUntilMinute(current, minute)
 		events = list(self._getGamesUntilMinute(minute))
 		distresult = self._distance(targetevent, events)
+		print("RESULT: ", distresult.info)
 		#print(distresult.info, targetevent.info)
 		#clusterresult = self._clustering(targetevent, events)
 		return distresult
@@ -715,7 +715,8 @@ class TextGame:
 		'''
 		if self.games != None:
 			for game in self.games:
-				yield self._getGameUntilMinute(game, minute)
+				if len(self.games[game]) > 0:
+					yield self._getGameUntilMinute(self.games[game], minute)
 
 
 class LiveGameAnalysisException(Exception):
@@ -790,20 +791,38 @@ class LiveGameAnalysis:
 				teams = self.data[dat][1][0]
 				if teams[0] == prepared[0] and teams[1] == prepared[1]:
 					return self.data[dat]
-		'''datagames = list(filter(lambda x: len(self.data[x]) > 0 \
-			and self.data[x][1][0][0] == prepared[0] \
-			and self.data[x][1][0][1] == prepared[1],\
-			self.data))
-		return datagames'''
 
 	def similarGames(self, title, startmin, endmin):
 		""" Find similar games with TextGame class """
 		if startmin > endmin:
 			raise LiveGameAnalysisException("Starttime can't be geather then endmin")
-		#self.textgame.similarGames(current, data, minute)
 		result = self._findGameByTitle(title)
-		print(result, ...)
+		self.textgame.similarGames(result, startmin, endmin=endmin)
 
+	def CountTargetEvent(self, event, startmin, endmin=0):
+		""" Count some event in every games in the base
+			For example: event - 'miss' and count it in every game from
+			startmin until evndmin (or just with startmin)
+
+			output: games with number of target events
+
+			events:
+			-yellow card
+			-miss
+			-offside
+			-free kick won
+			-corner
+			...
+		"""
+		result = list(self._countTargetEventHelp(event, startmin, endmin))
+		return result
+
+	def _countTargetEventHelp(self, event, startmin, endmin):
+		for name in self.data:
+			evt = self.data[name]
+			if len(evt) > 0:
+				count_events = len(list(filter(lambda x: x[1] == event, evt[0])))
+				yield(evt[1], count_events)
 
 class Finder:
 	""" Find games with natural language
