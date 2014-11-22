@@ -848,8 +848,11 @@ class Finder:
 			self.data = FinderHelpful(teams, lga)
 		else:
 			#This is FinderHelpful object
-			self.data = data
+			self.data = findclass
+		self._findData(data)
 
+	def _findData(self, data):
+		pass
 	def query(self, value):
 		if len(value) == 0:
 			raise Exception("THis query is empty")
