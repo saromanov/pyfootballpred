@@ -828,6 +828,23 @@ class LiveGameAnalysis:
 				count_events = len(list(filter(lambda x: x[1] == event, evt[0])))
 				yield(evt[1], count_events)
 
+	def getEvents(self, eventname):
+		matches = MatchesData()
+		for ds in self.data:
+			events = self.data[ds]
+			if len(events) > 0:
+				matches.add(list(filter(lambda x: x[1] == eventname, events[0])))
+		return matches
+
+
+class MatchesData:
+	""" Object class for matches """
+	def __init__(self):
+		self.result = []
+
+	def add(self, game):
+		self.result.append(game)
+
 class FinderHelpful:
 	def __init__(self, teams, matches):
 		self.teams = teams
@@ -840,23 +857,37 @@ class Finder:
 		Finder("yellow cards").ident(>5)
 	"""
 	def __init__(self, data, findclass=None):
+		self.calculation = None
 		if findclass == None:
 			""" Load basic classes """
 			manage = ManageData(path='../teams')
 			teams = manage.data['teams']
 			lga = LiveGameAnalysis(data='./matches')
 			self.data = FinderHelpful(teams, lga)
+			self.calculation = self._asyncCall(self.data.matches.getEvents, \
+				params=('miss',))
 		else:
 			#This is FinderHelpful object
 			self.data = findclass
 		self._findData(data)
 
+	def _asyncCall(self, func, params):
+		pool = Pool(processes=2)
+		return pool.apply_async(func, args=params)
+
 	def _findData(self, data):
 		pass
+
 	def query(self, value):
 		if len(value) == 0:
 			raise Exception("THis query is empty")
-		return Finder(data, value)
+		if self.calculation != None:
+			matches = self.calculation.get()
+			if isinstance(matches, MatchesData):
+				for game in matches.result:
+					if value(len(game)):
+						print(game, ...)
+		#return Finder(data, value)
 
 	def ident(self, value):
 		""" can be >,<,=,>=,<= """
@@ -866,7 +897,7 @@ class Finder:
 		pass
 
 	def less(self, param):
-		pass
+		self.query(lambda x: x < param)
 
 
 class CollectMatches:
