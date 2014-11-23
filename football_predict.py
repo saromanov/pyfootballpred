@@ -855,9 +855,17 @@ class Finder:
 		Fox example "interesting game" or "game with many yellow cards"
 		TODO
 		Finder("yellow cards").ident(>5)
+
+		data can be just a query or in the map view
+		map can be in key with:
+		Player, Event
+		For example {player: rooney}
+					{event: 'miss'}
 	"""
 	def __init__(self, data, findclass=None):
 		self.calculation = None
+		self._identQuery(data)
+		self.reserved = ['player', 'event']
 		if findclass == None:
 			""" Load basic classes """
 			manage = ManageData(path='../teams')
@@ -871,6 +879,10 @@ class Finder:
 			self.data = findclass
 		self._findData(data)
 
+	def _identQuery(self, data):
+		if type(data) ==  builtins.dict:
+			pass
+
 	def _asyncCall(self, func, params):
 		pool = Pool(processes=2)
 		return pool.apply_async(func, args=params)
@@ -879,22 +891,22 @@ class Finder:
 		pass
 
 	def query(self, value):
-		if len(value) == 0:
+		if value == None:
 			raise Exception("THis query is empty")
 		if self.calculation != None:
 			matches = self.calculation.get()
 			if isinstance(matches, MatchesData):
 				for game in matches.result:
 					if value(len(game)):
-						print(game, ...)
+						yield game
 		#return Finder(data, value)
 
-	def ident(self, value):
+	def ident(self, param):
 		""" can be >,<,=,>=,<= """
-		pass
+		self.query(lambda x: x == param)
 
 	def greater(self, param):
-		pass
+		self.query(lambda x: x > param)
 
 	def less(self, param):
 		self.query(lambda x: x < param)
