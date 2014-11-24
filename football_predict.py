@@ -185,6 +185,15 @@ class ManageData:
 			game = (splitted[2][1:-1], splitted[3][1:-1])
 			score = splitted[-1:][0][1:-1]
 			return game, score
+
+	def getAllTeams(self):
+		""" After load of team data, return all teams name """
+		return list(self.data['teams'].keys())
+
+	def getAllParamPlayers(self):
+		""" After load of team data, return all params with each player """
+		return list(self.data['teams']['Chelsea'][0].keys())
+
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
 	startstat = data.find('defaultWsPlayerStatsConfigParams.defaultParams')+49
@@ -836,6 +845,13 @@ class LiveGameAnalysis:
 				matches.add(list(filter(lambda x: x[1] == eventname, events[0])))
 		return matches
 
+	def getAllEventsName(self):
+		""" Return just all events name 
+			Now is dirty solution, return event from only one game
+		"""
+		tempkeys = list(self.data.keys())
+		return set(map(lambda x: x[1], self.data[tempkeys[0]][0]))
+
 
 class MatchesData:
 	""" Object class for matches """
@@ -869,8 +885,14 @@ class Finder:
 		if findclass == None:
 			""" Load basic classes """
 			manage = ManageData(path='../teams')
+
+			self._teamsName = manage.getAllTeams()
+			self._playerParams = manage.getAllParamPlayers()
+
 			teams = manage.data['teams']
 			lga = LiveGameAnalysis(data='./matches')
+			self._gameevents = lga.getAllEventsName()
+
 			self.data = FinderHelpful(teams, lga)
 			self.calculation = self._asyncCall(self.data.matches.getEvents, \
 				params=('miss',))
