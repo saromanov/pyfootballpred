@@ -866,6 +866,9 @@ class FinderHelpful:
 		self.teams = teams
 		self.matches = matches
 
+COMPLEX_QUERY = 'ComplexQuery'
+SIMPLE_QUERY = 'SimpleQuery'
+
 class Finder:
 	""" Find games with natural language
 		Fox example "interesting game" or "game with many yellow cards"
@@ -880,19 +883,24 @@ class Finder:
 	"""
 	def __init__(self, data, findclass=None):
 		self.calculation = None
-		self._identQuery(data)
+		query_type = self._identQuery(data)
 		self.reserved = ['player', 'event']
 		if findclass == None:
 			""" Load basic classes """
 			manage = ManageData(path='../teams')
-
-			self._teamsName = manage.getAllTeams()
-			self._playerParams = manage.getAllParamPlayers()
+			if query_type == COMPLEX_QUERY:
+				""" Just for single key """
+				keys = list(data.keys())[0]
+				self.target = data[keys]
+				if keys == 'player':
+					self._playerParams = manage.getAllParamPlayers()
+				elif keys == 'event':
+					self._teamsName = manage.getAllTeams()
 
 			teams = manage.data['teams']
 			lga = LiveGameAnalysis(data='./matches')
 			self._gameevents = lga.getAllEventsName()
-
+			
 			self.data = FinderHelpful(teams, lga)
 			self.calculation = self._asyncCall(self.data.matches.getEvents, \
 				params=('miss',))
@@ -901,9 +909,18 @@ class Finder:
 			self.data = findclass
 		self._findData(data)
 
+	def _prepareQuery(self, data):
+		""" Some preparation of query """
+		return data.lower()
+
 	def _identQuery(self, data):
+		""" First, ident the type of query. It can be as {player: rooney} its
+			a complex query or just a "rooney" its a simple query
+		"""
 		if type(data) ==  builtins.dict:
-			pass
+			return 'ComplexQuery'
+		if type(data) == builtins.str:
+			return 'SimpleQuery'
 
 	def _asyncCall(self, func, params):
 		pool = Pool(processes=2)
@@ -924,14 +941,20 @@ class Finder:
 		#return Finder(data, value)
 
 	def ident(self, param):
-		""" can be >,<,=,>=,<= """
-		self.query(lambda x: x == param)
+		return list(self.query(lambda x: x == param))
 
 	def greater(self, param):
-		self.query(lambda x: x > param)
+		return list(self.query(lambda x: x > param))
 
 	def less(self, param):
-		self.query(lambda x: x < param)
+		return list(self.query(lambda x: x < param))
+
+	def event(self, query):
+		if query in self._playerParams:
+			teams = list(self.data.teams.keys())
+			for team in teams:
+				print(list(filter(lambda x: x['LastName'] == self.target, teams[team])))
+		return None
 
 
 class CollectMatches:
