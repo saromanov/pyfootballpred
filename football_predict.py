@@ -194,6 +194,10 @@ class ManageData:
 		""" After load of team data, return all params with each player """
 		return list(self.data['teams']['Chelsea'][0].keys())
 
+	def getDataFromTeams(self, param):
+		""" Return some param from all players, from all teams """
+		return list(self.data['teams'])
+
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
 	startstat = data.find('defaultWsPlayerStatsConfigParams.defaultParams')+49
@@ -896,14 +900,20 @@ class Finder:
 					self._playerParams = manage.getAllParamPlayers()
 				elif keys == 'event':
 					self._teamsName = manage.getAllTeams()
+			else:
+				self._playerParams = manage.getAllParamPlayers()
+				self._teamsName = manage.getAllTeams()
+				teams = manage.data['teams']
+				lga = LiveGameAnalysis(data='./matches')
+				self._gameevents = lga.getAllEventsName()
+				self.data = FinderHelpful(manage, lga)
+				if data in self._playerParams:
+					self.calculation = self._asyncCall(self.data.teams.getDataFromTeams, params=(data,))
+				if data in self._teamsName:
+					print("THIS IS IN TEAMS", ...)
 
-			teams = manage.data['teams']
-			lga = LiveGameAnalysis(data='./matches')
-			self._gameevents = lga.getAllEventsName()
-			
-			self.data = FinderHelpful(teams, lga)
-			self.calculation = self._asyncCall(self.data.matches.getEvents, \
-				params=('miss',))
+			'''self.calculation = self._asyncCall(self.data.matches.getEvents, \
+				params=('miss',))'''
 		else:
 			#This is FinderHelpful object
 			self.data = findclass
@@ -953,8 +963,21 @@ class Finder:
 		if query in self._playerParams:
 			teams = list(self.data.teams.keys())
 			for team in teams:
-				print(list(filter(lambda x: x['LastName'] == self.target, teams[team])))
+				info = self.data.teams[team]
+				result = list(filter(lambda x: x['LastName'] == self.target, info))
+				if len(result) > 0:
+					return result[0][query]
 		return None
+
+	def view(self, value):
+		""" View results with some value
+			For example: 
+				Finder('Goals')
+					.greater(10)
+					.view('LastName')
+			Return pairs (goals, LastName) with greater than 10
+		"""
+		pass
 
 
 class CollectMatches:
