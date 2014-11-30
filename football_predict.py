@@ -196,7 +196,14 @@ class ManageData:
 
 	def getDataFromTeams(self, param):
 		""" Return some param from all players, from all teams """
-		return list(self.data['teams'])
+		data = self.data
+		result = []
+		for team in data:
+			#print(list(filter(lambda x: x == param, data[team][0])))
+			for value in data[team].keys():
+				result.extend((list(map(lambda x: (x[param],x['LastName']), \
+					data[team][value]))))
+		return PlayerData(result)
 
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
@@ -865,6 +872,10 @@ class MatchesData:
 	def add(self, game):
 		self.result.append(game)
 
+class PlayerData:
+	def __init__(self, data):
+		self.data = data
+
 class FinderHelpful:
 	def __init__(self, teams, matches):
 		self.teams = teams
@@ -908,16 +919,21 @@ class Finder:
 				self._gameevents = lga.getAllEventsName()
 				self.data = FinderHelpful(manage, lga)
 				if data in self._playerParams:
-					self.calculation = self._asyncCall(self.data.teams.getDataFromTeams, params=(data,))
-				if data in self._teamsName:
+					self.calculation = self._asyncCall(self.data.teams.getDataFromTeams, \
+						params=(data,))
+				elif data in self._teamsName:
 					print("THIS IS IN TEAMS", ...)
+				else:
+					self.calculation = self._asyncCall(self.data.matches.getEvents, \
+					params=(data,))
 
 			'''self.calculation = self._asyncCall(self.data.matches.getEvents, \
 				params=('miss',))'''
 		else:
 			#This is FinderHelpful object
-			self.data = findclass
-		self._findData(data)
+			self.resultdata = findclass
+			print("THIS IS", ...)
+		#self._findData(data)
 
 	def _prepareQuery(self, data):
 		""" Some preparation of query """
@@ -945,16 +961,22 @@ class Finder:
 		if self.calculation != None:
 			matches = self.calculation.get()
 			if isinstance(matches, MatchesData):
-				for game in matches.result:
-					if value(len(game)):
-						yield game
-		#return Finder(data, value)
+				afunc = lambda results: list(filter(lambda game: value(len(game)), \
+					results))
+				result = self._asyncCall(afunc, params=matches.result)
+				return result
+			if isinstance(matches, PlayerData):
+				afunc = lambda results, val: list(filter(lambda x: val(x[0]), \
+					results))
+				return afunc(matches.data, value)
+				#return self._asyncCall(afunc, params=(matches.data,value, )).get()
 
 	def ident(self, param):
 		return list(self.query(lambda x: x == param))
 
 	def greater(self, param):
-		return list(self.query(lambda x: x > param))
+		paramvalue = self.query(lambda x: x > param)
+		return Finder(param, findclass=paramvalue)
 
 	def less(self, param):
 		return list(self.query(lambda x: x < param))
@@ -969,7 +991,7 @@ class Finder:
 					return result[0][query]
 		return None
 
-	def view(self, value):
+	def viewBy(self, value):
 		""" View results with some value
 			For example: 
 				Finder('Goals')
@@ -978,6 +1000,10 @@ class Finder:
 			Return pairs (goals, LastName) with greater than 10
 		"""
 		pass
+
+	def show(self):
+		""" Output results """
+		return self.resultdata
 
 
 class CollectMatches:
