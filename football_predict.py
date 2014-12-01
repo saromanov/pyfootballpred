@@ -127,7 +127,6 @@ class ManageData:
 		""" Get best player by value, ...all params
 		"""
 		team, params = self._preparegetBestByAllParams(kwargs)
-		print(team, params, ...)
 		bestparam = 9999
 		result = None
 		params = list(params[0].keys())
@@ -880,6 +879,7 @@ class FinderHelpful:
 	def __init__(self, teams, matches):
 		self.teams = teams
 		self.matches = matches
+		self.use = None
 
 COMPLEX_QUERY = 'ComplexQuery'
 SIMPLE_QUERY = 'SimpleQuery'
@@ -896,10 +896,11 @@ class Finder:
 		For example {player: rooney}
 					{event: 'miss'}
 	"""
-	def __init__(self, data, findclass=None):
+	def __init__(self, data, *args, **kwargs):
 		self.calculation = None
 		query_type = self._identQuery(data)
 		self.reserved = ['player', 'event']
+		findclass = kwargs.get('findclass')
 		if findclass == None:
 			""" Load basic classes """
 			manage = ManageData(path='../teams')
@@ -921,6 +922,7 @@ class Finder:
 				if data in self._playerParams:
 					self.calculation = self._asyncCall(self.data.teams.getDataFromTeams, \
 						params=(data,))
+					self.data.use = teams
 				elif data in self._teamsName:
 					print("THIS IS IN TEAMS", ...)
 				else:
@@ -930,9 +932,14 @@ class Finder:
 			'''self.calculation = self._asyncCall(self.data.matches.getEvents, \
 				params=('miss',))'''
 		else:
-			#This is FinderHelpful object
+			"""
+				Inner call
+			"""
 			self.resultdata = findclass
-			print("THIS IS", ...)
+			#Used data in this session(player data, match data)
+			self.useddata = kwargs.get('useddata')
+			self.findclass = findclass
+
 		#self._findData(data)
 
 	def _prepareQuery(self, data):
@@ -976,7 +983,7 @@ class Finder:
 
 	def greater(self, param):
 		paramvalue = self.query(lambda x: x > param)
-		return Finder(param, findclass=paramvalue)
+		return Finder(param, findclass=paramvalue, useddata=self.data.use)
 
 	def less(self, param):
 		return list(self.query(lambda x: x < param))
@@ -999,7 +1006,15 @@ class Finder:
 					.view('LastName')
 			Return pairs (goals, LastName) with greater than 10
 		"""
-		pass
+
+		#Now in player case
+		names = list(map(lambda x: x[1], self.findclass))
+		result = []
+		for team in self.useddata.keys():
+			for player in self.useddata[team]:
+				if player['LastName'] in names:
+					result.append((player['LastName'], player[value]))
+		return result
 
 	def show(self):
 		""" Output results """
