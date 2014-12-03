@@ -923,11 +923,17 @@ class Finder:
 					self.calculation = self._asyncCall(self.data.teams.getDataFromTeams, \
 						params=(data,))
 					self.data.use = teams
+					self.resultdata = self.calculation.get().data
+					self.useddata = teams
+					self.findclass = self.calculation.get().data
 				elif data in self._teamsName:
-					print("THIS IS IN TEAMS", ...)
+					""" TODO: Implement it """
+					pass
 				else:
 					self.calculation = self._asyncCall(self.data.matches.getEvents, \
 					params=(data,))
+					self.resultdata = self.calculation.get()
+					self.useddata = teams
 
 			'''self.calculation = self._asyncCall(self.data.matches.getEvents, \
 				params=('miss',))'''
@@ -1008,13 +1014,19 @@ class Finder:
 		"""
 
 		#Now in player case
-		names = list(map(lambda x: x[1], self.findclass))
+		findlastname = lambda name: list(filter(lambda x: name in x, self.findclass))
 		result = []
 		for team in self.useddata.keys():
 			for player in self.useddata[team]:
-				if player['LastName'] in names:
-					result.append((player['LastName'], player[value]))
-		return result
+				target = findlastname(player['LastName'])
+				if len(target) > 0:
+					res = list(target[0])
+					if value in player:
+						res.append(player[value])
+						result.append(res)
+		if len(result) == 0:
+			return self.findclass
+		return Finder(value, findclass=result, useddata=self.useddata)
 
 	def show(self):
 		""" Output results """
