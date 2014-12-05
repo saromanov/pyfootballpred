@@ -22,6 +22,8 @@ teamsIds = ['26','167','15','13','31','32','18','162','30','23','96','259','29',
 
 #http://www.whoscored.com/Teams/32
 
+LASTNAME = 'lastname'
+
 def loadFromUrl(url):
 	opener = urllib.request.build_opener()
 	opener.addheaders = [('User-agent', 'Mozilla/5.0')]
@@ -39,12 +41,24 @@ class ManageData:
 			self.data = self._readData(url)
 		if path != None:
 			self.data = self._loadData(path)
+			self.data = self.transformData(self.data)
 		if self.data != None:
-			self.teams = self.data['teams']
+			self.teams = self.data
 
 	def _readData(self, url):
 		return loadFromUrl(url)
 
+	def transformData(self, data):
+		""" Transform loaded data(teams) to lower case """
+		if data == None:
+			raise Exception("Current data was not loaded")
+		teams = data['teams']
+		return {
+			team.lower(): \
+			[{param.lower():player[param] for param in player.keys()} \
+					for player in teams[team]]\
+			for team in teams.keys()
+			}
 
 	#load data from json file file
 	def _loadData(self, path):
@@ -90,7 +104,7 @@ class ManageData:
 		def recurgetBest(teamsdata, teams, param, data=[]):
 			if len(teams) == 0:return False, data
 			team = teams.pop()
-			newvalue = [(t[param], t['LastName'], t['TeamName']) for t in teamsdata[team]]
+			newvalue = [(t[param], t[LASTNAME], t['TeamName']) for t in teamsdata[team]]
 			return True, (teamsdata, teams, param, data+newvalue, )
 
 		values = recurgetBest(self.teams, list(self.teams.keys()), param)
@@ -130,7 +144,7 @@ class ManageData:
 		bestparam = 9999
 		result = None
 		params = list(params[0].keys())
-		[params.remove(param) for param in ['Name', 'LastName', 'FirstName',\
+		[params.remove(param) for param in ['Name', LASTNAME, 'FirstName',\
 			'TeamName','PlayedPositionsRaw','TeamId', 'DateOfBirth','PlayerId',\
 			'WSName', 'KnownName', 'IsCurrentPlayer','PositionShort',\
 			'PositionText','TeamRegionCode','PositionLong']]
@@ -187,21 +201,19 @@ class ManageData:
 
 	def getAllTeams(self):
 		""" After load of team data, return all teams name """
-		return list(self.data['teams'].keys())
+		return list(self.data.keys())
 
 	def getAllParamPlayers(self):
 		""" After load of team data, return all params with each player """
-		return list(self.data['teams']['Chelsea'][0].keys())
+		return list(self.data['chelsea'][0].keys())
 
 	def getDataFromTeams(self, param):
 		""" Return some param from all players, from all teams """
 		data = self.data
 		result = []
 		for team in data:
-			#print(list(filter(lambda x: x == param, data[team][0])))
-			for value in data[team].keys():
-				result.extend((list(map(lambda x: (x[param],x['LastName']), \
-					data[team][value]))))
+			for player in data[team]:
+				result.append((player[param], player[LASTNAME]))
 		return PlayerData(result)
 
 def getActivity():
@@ -225,12 +237,12 @@ def getPlayer(teamdata, lastname):
 	""" 
 	teamdata - dict with all teams
 	Return target player from team by last name """
-	return list(filter(lambda x: x['LastName'] == lastname, teamdata))[0]
+	return list(filter(lambda x: x[LASTNAME] == lastname, teamdata))[0]
 
 def dataToNames(data):
 	""" Change list with params to only last name
 	"""
-	return list(map(lambda x: x['LastName'], data))
+	return list(map(lambda x: x[LASTNAME], data))
 
 
 def getPos(sorttuple, player):
@@ -293,7 +305,7 @@ class OptimalTeam:
 
 	def _filterUsed(self, players, stored):
 		""" Reject players wich alread in stored """
-		return list(filter(lambda x: x['LastName'] not in stored, players))
+		return list(filter(lambda x: x[LASTNAME] not in stored, players))
 
 	def _getTargetPlayers(self, team, num, pos, params, stored=[]):
 		players = []
@@ -309,14 +321,14 @@ class OptimalTeam:
 
 		if len(players) == 0:
 			players = self._getFromAnotherPos(team, pos, num, \
-				list(map(lambda x:x['LastName'], players)))
+				list(map(lambda x:x[LASTNAME], players)))
 		vecparams = self._getParamValues(players, params)
 		matr = np.array(vecparams)
 		if len(matr) > 0:
 			if len(matr) > num: 
 				return self._optimalPlayers(matr, np.argmax, num, players)
 			if len(matr) ==  num:
-				return list(map(lambda x: x['LastName'], players))
+				return list(map(lambda x: x[LASTNAME], players))
 			else:
 				another = self._getFromAnotherPos(team, pos, num, players)
 				return dataToNames(another)
@@ -419,7 +431,7 @@ class OptimalTeam:
 		"""
 		anotherpos = pos[0:pos.find('(')]
 		return list(filter(lambda x: anotherpos in x['PositionShort'] and\
-							             x['LastName'] not in stored
+							             x[LASTNAME] not in stored
 			, self.teamdata[team]))[0:num]
 
 
@@ -427,9 +439,9 @@ class OptimalTeam:
 		""" Get optimal Defender to center """
 		players = list(getPlayersFromTeamByPos(self.teamdata, team, 'D(C)'))
 		params = ['TotalTackles', 'AerialWon', 'Rating','OffsidesWon','GameStarted',\
-		 'ShotsBlocked', 'LastName']
+		 'ShotsBlocked', LASTNAME]
 		tomaxvalues = self._getParamValues(players, params)
-		tominvalues = self._getParamValues(players,['AerialLost','Dispossesed','Yellow', 'LastName'])
+		tominvalues = self._getParamValues(players,['AerialLost','Dispossesed','Yellow', LASTNAME])
 		if len(tomaxvalues) > 1:
 			maxv = self._optimalPlayers(np.array(tomaxvalues), np.argmax, num, players)
 		else:
@@ -443,7 +455,7 @@ class OptimalTeam:
 		#if same players both in maxv and minv append in result list
 		data = list(set(maxv).intersection(set(minv)))
 		if len(data) < num:
-			return data + list(map(lambda x: x['LastName'], self._getFromAnotherPos(team, 'D(C)', num-len(data), data)))
+			return data + list(map(lambda x: x[LASTNAME], self._getFromAnotherPos(team, 'D(C)', num-len(data), data)))
 		#self._opteamOptimal(self.fwparams, opteam, players)
 		size = len(data)
 		if size == 2: return data
@@ -468,11 +480,11 @@ class OptimalTeam:
 		@recur.tco
 		def optimalInner(matr, func, num, players, res=set()):
 			c = Counter(func(matr, axis=0)).most_common(num)
-			result = set(map(lambda x: players[x[0]]['LastName'], c))
+			result = set(map(lambda x: players[x[0]][LASTNAME], c))
 			if len(result) == num: 
 				res |= result
 				return False, list(res)
-			idxs = list(filter(lambda x: players[x]['LastName'] in result, \
+			idxs = list(filter(lambda x: players[x][LASTNAME] in result, \
 				range(len(players))))
 			temp = matr.tolist()
 			for i in idxs:
@@ -905,17 +917,13 @@ class Finder:
 			""" Load basic classes """
 			manage = ManageData(path='../teams')
 			if query_type == COMPLEX_QUERY:
-				""" Just for single key """
-				keys = list(data.keys())[0]
-				self.target = data[keys]
-				if keys == 'player':
-					self._playerParams = manage.getAllParamPlayers()
-				elif keys == 'event':
-					self._teamsName = manage.getAllTeams()
+				""" Case for COMPLEX QUERY """
+				self._complexQuery(data)
 			else:
+				data = self._prepareQuery(data)
 				self._playerParams = manage.getAllParamPlayers()
 				self._teamsName = manage.getAllTeams()
-				teams = manage.data['teams']
+				teams = manage.data
 				lga = LiveGameAnalysis(data='./matches')
 				self._gameevents = lga.getAllEventsName()
 				self.data = FinderHelpful(manage, lga)
@@ -925,7 +933,7 @@ class Finder:
 					self.data.use = teams
 					self.resultdata = self.calculation.get().data
 					self.useddata = teams
-					self.findclass = self.calculation.get().data
+					self.findclass = self.resultdata
 				elif data in self._teamsName:
 					""" TODO: Implement it """
 					pass
@@ -947,6 +955,15 @@ class Finder:
 			self.findclass = findclass
 
 		#self._findData(data)
+
+	def _complexQuery(self, data):
+		""" Just for single key """
+		keys = list(data.keys())[0]
+		self.target = data[keys]
+		if keys == 'player':
+			self._playerParams = manage.getAllParamPlayers()
+		elif keys == 'event':
+			self._teamsName = manage.getAllTeams()
 
 	def _prepareQuery(self, data):
 		""" Some preparation of query """
@@ -999,7 +1016,7 @@ class Finder:
 			teams = list(self.data.teams.keys())
 			for team in teams:
 				info = self.data.teams[team]
-				result = list(filter(lambda x: x['LastName'] == self.target, info))
+				result = list(filter(lambda x: x[LASTNAME] == self.target, info))
 				if len(result) > 0:
 					return result[0][query]
 		return None
@@ -1009,7 +1026,7 @@ class Finder:
 			For example: 
 				Finder('Goals')
 					.greater(10)
-					.view('LastName')
+					.view(LASTNAME)
 			Return pairs (goals, LastName) with greater than 10
 		"""
 
@@ -1018,7 +1035,7 @@ class Finder:
 		result = []
 		for team in self.useddata.keys():
 			for player in self.useddata[team]:
-				target = findlastname(player['LastName'])
+				target = findlastname(player['lastname'])
 				if len(target) > 0:
 					res = list(target[0])
 					if value in player:
