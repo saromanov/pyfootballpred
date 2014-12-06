@@ -893,6 +893,14 @@ class FinderHelpful:
 		self.matches = matches
 		self.use = None
 
+
+class QueryData(object):
+	"""Set information for each query"""
+	def __init__(self, arg):
+		super(QueryData, self).__init__()
+		self.arg = arg
+		
+
 COMPLEX_QUERY = 'ComplexQuery'
 SIMPLE_QUERY = 'SimpleQuery'
 
@@ -953,6 +961,7 @@ class Finder:
 			#Used data in this session(player data, match data)
 			self.useddata = kwargs.get('useddata')
 			self.findclass = findclass
+			self.data = self.useddata
 
 		#self._findData(data)
 
@@ -985,9 +994,9 @@ class Finder:
 	def _findData(self, data):
 		pass
 
-	def query(self, value):
+	def query(self, value,*args,**kwargs):
 		if value == None:
-			raise Exception("THis query is empty")
+			raise Exception("This query is empty")
 		if self.calculation != None:
 			matches = self.calculation.get()
 			if isinstance(matches, MatchesData):
@@ -1000,16 +1009,32 @@ class Finder:
 					results))
 				return afunc(matches.data, value)
 				#return self._asyncCall(afunc, params=(matches.data,value, )).get()
+		else:
+			print("WHEN CALCULATION IS ZERO", self.findclass)
 
-	def ident(self, param):
-		return list(self.query(lambda x: x == param))
+	def ident(self, param,**kwargs):
+		return self._templatePred(param, lambda x: x == param)
 
-	def greater(self, param):
-		paramvalue = self.query(lambda x: x > param)
+	def greater(self, param,**kwargs):
+		return self._templatePred(param, lambda x: x > param,**kwargs)
+
+	def less(self, param,**kwargs):
+		return self._templatePred(param, lambda x: x < param)
+
+	def _templatePred(self, param, pred, **kwargs):
+		""" Template for greather, less, ident and for others
+			with predicate
+		"""
+		issort = kwargs.get('sort')
+		paramvalue = self.query(pred)
+		if issort:
+			paramvalue = self._toSort(paramvalue)
 		return Finder(param, findclass=paramvalue, useddata=self.data.use)
 
-	def less(self, param):
-		return list(self.query(lambda x: x < param))
+
+	def _toSort(self, paramvalue):
+		""" Sorted output values """
+		return sorted(paramvalue, key=lambda x: x[0], reverse=True)
 
 	def event(self, query):
 		if query in self._playerParams:
@@ -1029,20 +1054,25 @@ class Finder:
 					.view(LASTNAME)
 			Return pairs (goals, LastName) with greater than 10
 		"""
-
 		#Now in player case
 		findlastname = lambda name: list(filter(lambda x: name in x, self.findclass))
 		result = []
+		dictresult =[]
 		for team in self.useddata.keys():
 			for player in self.useddata[team]:
-				target = findlastname(player['lastname'])
+				target = findlastname(player[LASTNAME])
 				if len(target) > 0:
 					res = list(target[0])
 					if value in player:
+						dictdata = {}
+						dictdata[value] = player[value]
+						dictdata['lastname'] = player[LASTNAME]
 						res.append(player[value])
 						result.append(res)
+						dictresult.append(dictdata)
+		print("DICT: ", dictresult, ...)
 		if len(result) == 0:
-			return self.findclass
+			result = findclass
 		return Finder(value, findclass=result, useddata=self.useddata)
 
 	def show(self):
