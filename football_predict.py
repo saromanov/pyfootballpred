@@ -1013,6 +1013,9 @@ class Finder:
 		else:
 			print("WHEN CALCULATION IS ZERO", self.findclass)
 
+	def get(self, data):
+		pass
+
 	def ident(self, param,**kwargs):
 		return self._templatePred(param, lambda x: x == param)
 
@@ -1154,28 +1157,3 @@ def GkToForward(player, gk):
 	if gk[0] == 0:
 		return 0
 	return player[0]/gk[0]
-
-
-def test_finder1():
-	fnd = Finder('dribbles').greater(10, sort=True)\
-							.viewBy('goals')\
-							.viewBy('yellow')\
-							.show()
-
-
-def test_finder2():
-	fnd = Finder('dribbles').greater(50)\
-							.viewBy('goals')\
-							.show()
-def test_finder3():
-	""" Example with team param """
-
-	#Find the game where was a greather then 5 misses
-	fnd = Finder('dribbles').greater(10).show()
-	print(fnd, ...)
-
-def test_finder4():
-	fnd = Finder('goals').greater(10).show()
-	print(fnd)
-
-test_finder4()
