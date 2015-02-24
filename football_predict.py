@@ -946,6 +946,7 @@ class Finder:
 					""" TODO: Implement it """
 					pass
 				else:
+					print(self.data.matches.getEvents, ...)
 					self.calculation = self._asyncCall(self.data.matches.getEvents, \
 					params=(data,))
 					self.resultdata = self.calculation.get()
@@ -1029,6 +1030,8 @@ class Finder:
 		paramvalue = self.query(pred)
 		if issort:
 			paramvalue = self._toSort(paramvalue)
+		if self.data.use == None:
+			raise Exception("Something went wrong. ")
 		return Finder(param, findclass=paramvalue, useddata=self.data.use)
 
 
@@ -1070,7 +1073,6 @@ class Finder:
 						res.append(player[value])
 						result.append(res)
 						dictresult.append(dictdata)
-		print("DICT: ", dictresult, ...)
 		if len(result) == 0:
 			result = findclass
 		return Finder(value, findclass=result, useddata=self.useddata)
@@ -1152,3 +1154,28 @@ def GkToForward(player, gk):
 	if gk[0] == 0:
 		return 0
 	return player[0]/gk[0]
+
+
+def test_finder1():
+	fnd = Finder('dribbles').greater(10, sort=True)\
+							.viewBy('goals')\
+							.viewBy('yellow')\
+							.show()
+
+
+def test_finder2():
+	fnd = Finder('dribbles').greater(50)\
+							.viewBy('goals')\
+							.show()
+def test_finder3():
+	""" Example with team param """
+
+	#Find the game where was a greather then 5 misses
+	fnd = Finder('dribbles').greater(10).show()
+	print(fnd, ...)
+
+def test_finder4():
+	fnd = Finder('goals').greater(10).show()
+	print(fnd)
+
+test_finder4()
