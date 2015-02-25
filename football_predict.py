@@ -11,6 +11,8 @@ import builtins
 from multiprocessing import Pool, Process, Queue, Lock, Array, Value
 import textblob
 from sklearn.neighbors.nearest_centroid import NearestCentroid
+from sklearn import linear_model
+
 #from requests import async
 
 #Only for English Premier League
@@ -230,7 +232,7 @@ def getActivity():
 def getPlayersFromTeamByPos(teamsdata, team, pos):
 	""" Return all players in target pos.
 	For example all forwards from team """
-	return list(filter(lambda x: x['PositionShort'] == pos, teamsdata[team]))
+	return list(filter(lambda x: x['positionshort'] == pos, teamsdata[team]))
 
 
 def getPlayer(teamdata, lastname):
@@ -244,6 +246,16 @@ def dataToNames(data):
 	"""
 	return list(map(lambda x: x[LASTNAME], data))
 
+def getPlayersByParams(teamdatas, params):
+	'''
+		List of params for all players from all teams
+	'''
+	teams = list(teamdatas.keys())
+	allparams = list(teamdatas[teams[0]][0].keys())
+	for team in teams:
+		for player in teamdatas[team]:
+			yield (list(map(lambda y: player[y], \
+				list(filter(lambda x: x in params, allparams)))))
 
 def getPos(sorttuple, player):
 	'''
@@ -523,6 +535,7 @@ class OptimalTeam:
 class StatisticsException(Exception):
 	pass
 
+
 class Statistics:
 	'''
 		Statistics and correlations for parameters in data
@@ -540,7 +553,7 @@ class Statistics:
 		keys = list(self.teamdata.keys())
 		result = []
 		for targteam in keys:
-			result.append(list(map(lambda x: [x[first], x[second],x['GameStarted']], bans[targteam])))
+			result.append(list(map(lambda x: [x[first], x[second],x['gamestarted']], bans[targteam])))
 		return sorted(result, key=lambda x:x[2])
 
 	def compareTeams(self, team1, team2):
@@ -552,7 +565,7 @@ class Statistics:
 			raise StatisticsException("On of teams not in the base")
 
 		result = {}
-		poses = set(map(lambda x: x['PositionShort'], self.teamdata[team1]))
+		poses = set(map(lambda x: x['positionshort'], self.teamdata[team1]))
 		for pos in poses:
 			players1 = list(getPlayersFromTeamByPos(self.teamdata, team1, pos))
 			players2 = list(getPlayersFromTeamByPos(self.teamdata, team2, pos))
@@ -563,6 +576,7 @@ class Statistics:
 			p.start()
 			p.join()
 			result = q.get()
+			print(result, ...)
 		return result
 
 	def _compareByPos(self, q):
@@ -570,7 +584,7 @@ class Statistics:
 		players1 = q.get()
 		for p1 in players1:
 			for p2 in players2:
-				pass
+				print(p1['yellow'])
 		q.put(1)
 
 
@@ -635,14 +649,19 @@ class Statistics:
 		'''
 		pass
 
+	def fit(self, Xdata, ydata):
+		'''
+			sklearn-like style fit and predict
+			Xdata - values for prediction
+			ydata - labels, what we want to predict
 
-	def predict(self, params, predvalue):
+			After this fit call predict from sklearn
+			TODO: split on train, test and validation sets
 		'''
-			params - data for prediction
-			predvalue - prediction value
-			Find optimal prediction
-		'''
-		pass
+		Xdatavalues = list(getPlayersByParams(self.teamdata, Xdata))
+		ydatavalues = list(getPlayersByParams(self.teamdata, ydata))
+		linear = linear_model.LinearRegression()
+		return linear.fit(Xdatavalues, ydatavalues)
 
 class Game:
 	'''

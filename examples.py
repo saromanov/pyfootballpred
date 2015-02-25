@@ -1,5 +1,7 @@
 from football_predict import *
 
+manage = ManageData(path='../teams')
+
 def finder1():
 	fnd = Finder('dribbles').greater(10, sort=True)\
 							.viewBy('goals')\
@@ -26,8 +28,17 @@ def finder4():
 #Statistics examples
 
 def stat1():
-	data = ManageData(path='../teams')
-	stat = Statistics(data)
+	stat = Statistics(manage.data)
+	print(stat.compareTeams('everton', 'arsenal'))
 
 def predict1():
+	stat = Statistics(manage.data)
+	stat.fit(['age', 'dribbles', 'totalpasses'], 'goals').predict([350, 13, 30])
+
+
+#Analysis for text broadcasting
+
+def textgame1():
 	pass
+
+predict1()
