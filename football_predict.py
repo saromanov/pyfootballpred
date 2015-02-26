@@ -649,19 +649,20 @@ class Statistics:
 		'''
 		pass
 
-	def fit(self, Xdata, ydata):
+	def fit(self, Xdata, ydata, model=linear_model.LinearRegression()):
 		'''
 			sklearn-like style fit and predict
 			Xdata - values for prediction
 			ydata - labels, what we want to predict
+			model - learning model (from sklearn)
 
 			After this fit call predict from sklearn
 			TODO: split on train, test and validation sets
 		'''
 		Xdatavalues = list(getPlayersByParams(self.teamdata, Xdata))
 		ydatavalues = list(getPlayersByParams(self.teamdata, ydata))
-		linear = linear_model.LinearRegression()
-		return linear.fit(Xdatavalues, ydatavalues)
+		#linear = linear_model.LinearRegression()
+		return model.fit(Xdatavalues, ydatavalues)
 
 class Game:
 	'''
@@ -698,6 +699,7 @@ class TextGame:
 			current - this game
 			minute - until this minute
 		'''
+		print(self.games, ...)
 		#Get all games untill current minute
 		if endmin != 0:
 			targetevent = self._getBetweenMinutes(current, minute, endmin)

@@ -1,4 +1,5 @@
 from football_predict import *
+import sklearn
 
 manage = ManageData(path='../teams')
 
@@ -33,12 +34,14 @@ def stat1():
 
 def predict1():
 	stat = Statistics(manage.data)
-	stat.fit(['age', 'dribbles', 'totalpasses'], 'goals').predict([350, 13, 30])
+	result = stat.fit(['age', 'dribbles', 'totalpasses'], 'goals').predict([[350, 13, 30], [220,18,7]])
+	print(result)
 
 
 #Analysis for text broadcasting
 
 def textgame1():
-	pass
+	txtgame = TextGame(games='./game')
+	txtgame.similarGames(5, 10)
 
-predict1()
+textgame1()
