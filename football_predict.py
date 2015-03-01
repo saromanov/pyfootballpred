@@ -64,13 +64,7 @@ class ManageData:
 
 	#load data from json file file
 	def _loadData(self, path):
-		data = None
-		try:
-			f = open(path)
-			data = f.read()
-		except Exception as e:
-			raise "File not found"
-		return json.loads(data)
+		return loadfromJSON(path)
 
 	#http://www.whoscored.com/Teams/32/Show/-Manchester-United
 	def getPlayersFromTeam(self, team):
@@ -217,6 +211,16 @@ class ManageData:
 			for player in data[team]:
 				result.append((player[param], player[LASTNAME]))
 		return PlayerData(result)
+
+
+def loadfromJSON(path):
+	data = None
+	try:
+		f = open(path)
+		data = f.read()
+	except Exception as e:
+		raise "File not found"
+	return json.loads(data)
 
 def getActivity():
 	data = readData('http://www.whoscored.com/Players/3859')
@@ -678,7 +682,13 @@ class TextGame:
 		Get data from online of game
 	'''
 	def __init__(self, games=None):
-		self.games = games
+		if isinstance(games, str):
+			self.games = self._loadData(games)
+		else:
+			self.games = games
+
+	def _loadData(self, path):
+		return loadfromJSON(path)
 
 	def _getRating(self, data):
 		items = {'yellow card':-1, 'free kick won':2, 'goal':2, 'free kick lost':-1,\
@@ -699,7 +709,7 @@ class TextGame:
 			current - this game
 			minute - until this minute
 		'''
-		print(self.games, ...)
+		print(self.games.keys())
 		#Get all games untill current minute
 		if endmin != 0:
 			targetevent = self._getBetweenMinutes(current, minute, endmin)
@@ -707,7 +717,6 @@ class TextGame:
 			targetevent = self._getGameUntilMinute(current, minute)
 		events = list(self._getGamesUntilMinute(minute))
 		distresult = self._distance(targetevent, events)
-		print("RESULT: ", distresult.info)
 		#print(distresult.info, targetevent.info)
 		#clusterresult = self._clustering(targetevent, events)
 		return distresult
@@ -769,6 +778,11 @@ class TextGame:
 			for game in self.games:
 				if len(self.games[game]) > 0:
 					yield self._getGameUntilMinute(self.games[game], minute)
+
+	def getGames(self, name):
+		""" Get games where contains 'name' (as team)"""
+		teams = self.games.keys()
+		return list(map(lambda m: self.games[m], filter(lambda x: name in x.split(), teams)))
 
 
 class LiveGameAnalysisException(Exception):
