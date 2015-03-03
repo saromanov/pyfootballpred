@@ -25,6 +25,9 @@ def finder4():
 	fnd = Finder('goals').greater(10).show()
 	print(fnd)
 
+def finder5():
+	fnd = Finder('goal').between(5,10)
+
 
 #Statistics examples
 
@@ -41,7 +44,19 @@ def predict1():
 #Analysis for text broadcasting
 
 def textgame1():
-	txtgame = TextGame(games='./game')
-	txtgame.similarGames(5, 10)
+	txtgame = TextGame(games='./matches')
+	#txtgame.similarGames('Manchester 5-0 City', 10)
+	print(len(txtgame.getGames('City')))
 
-textgame1()
+def textgame2():
+	fun1 = LiveGameAnalysis(data='./matches')
+	print(fun1.mostFreqEvents(28, 37))
+
+def textgame3():
+	fun1 = LiveGameAnalysis(data='./matches')
+	#print(fun1.similarGames('Manchester 5-0 City', 20,45))
+	print(list(fun1.getEvents('goal')))
+def textgame4():
+	fun1 = LiveGameAnalysis(data='./matches')
+	print(list(fun1.getEventsByTime(1, 5)))
+

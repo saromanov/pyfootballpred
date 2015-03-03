@@ -709,7 +709,6 @@ class TextGame:
 			current - this game
 			minute - until this minute
 		'''
-		print(self.games.keys())
 		#Get all games untill current minute
 		if endmin != 0:
 			targetevent = self._getBetweenMinutes(current, minute, endmin)
@@ -790,7 +789,10 @@ class LiveGameAnalysisException(Exception):
 	pass
 
 class LiveGameAnalysis:
-	""" Analysis from life text report of the game """
+	""" 
+		Analysis from life text report of the game
+		TODO: Rewrite it for Finder class
+	"""
 	def __init__(self, *args, **kwargs):
 		self.data = self._collectMatches(kwargs)
 		if self.data == None:
@@ -894,13 +896,46 @@ class LiveGameAnalysis:
 				count_events = len(list(filter(lambda x: x[1] == event, evt[0])))
 				yield(evt[1], count_events)
 
-	def getEvents(self, eventname):
-		matches = MatchesData()
-		for ds in self.data:
-			events = self.data[ds]
-			if len(events) > 0:
-				matches.add(list(filter(lambda x: x[1] == eventname, events[0])))
-		return matches
+	def _getEventsInner(self, eventname, data=None):
+		'''
+			Return all events (for example "goal") from all games
+			getEvents('goal')
+		'''
+		contain = self._prepareData(data)
+		return self._mainLoop(contain, lambda x: x[1] == eventname)
+
+	def getEvents(self, eventname, data=None):
+		return list(self._getEventsInner(eventname, data=data))
+
+	def getEventsByTime(self, startmin, endmin, data=None):
+		"""
+			data - Optional element. already prepared elements. No need check self.data
+		"""
+		if startmin < 0 or startmin > 90:
+			raise Exception("Startmin can't be less than zero or greather than 90")
+		if endmin < 1 or endmin > 90:
+			raise Exception("Startmin can't be less than 1 or greather than 90")
+		contain = self._prepareData(data)
+		return self._mainLoop(contain, lambda x: x[0] >= startmin and x[0] <= endmin)
+
+	def _prepareData(self, data):
+		if data == None: return [self.data[x] for x in self.data if len(self.data[x]) > 0]
+		#Already prepared
+		else: return data
+
+	def _mainLoop(self, data, func):
+		'''
+			After prepare data - run mainLoop over all games
+		'''
+		for ds in data:
+			yield self._innerFilter(func, ds[0])
+
+	def _innerFilter(self, func, elements):
+		""" 
+			Filtering elements from datastore(self.data) or from already prepared (data)
+		"""
+		return list(filter(func, elements))
+
 
 	def getAllEventsName(self):
 		""" Return just all events name 
@@ -950,6 +985,8 @@ class Finder:
 		Player, Event
 		For example {player: rooney}
 					{event: 'miss'}
+
+		High-Oreder class over all in this file
 	"""
 	def __init__(self, data, *args, **kwargs):
 		self.calculation = None
@@ -968,6 +1005,7 @@ class Finder:
 				self._teamsName = manage.getAllTeams()
 				teams = manage.data
 				lga = LiveGameAnalysis(data='./matches')
+				self.lga = lga
 				self._gameevents = lga.getAllEventsName()
 				self.data = FinderHelpful(manage, lga)
 				if data in self._playerParams:
@@ -980,8 +1018,10 @@ class Finder:
 				elif data in self._teamsName:
 					""" TODO: Implement it """
 					pass
-				else:
-					print(self.data.matches.getEvents, ...)
+				elif data in self._gameevents:
+					"""
+						In the case in data(query) from events from game 
+					"""
 					self.calculation = self._asyncCall(self.data.matches.getEvents, \
 					params=(data,))
 					self.resultdata = self.calculation.get()
@@ -1118,6 +1158,10 @@ class Finder:
 	def show(self):
 		""" Output results """
 		return self.resultdata
+
+	def between(self, startmin, endmin):
+		print(self.lga)
+		return Finder(startmin, findclass=self.resultdata)
 
 
 class CollectMatches:
