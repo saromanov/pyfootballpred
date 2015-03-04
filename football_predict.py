@@ -992,8 +992,10 @@ class Finder:
 		self.calculation = None
 		query_type = self._identQuery(data)
 		self.reserved = ['player', 'event']
-		findclass = kwargs.get('findclass')
-		if findclass == None:
+		preresult = kwargs.get('preresult')
+		#All queries durning session
+		self.queries = kwargs.get('queries', [data, 'lastname'])
+		if preresult == None:
 			""" Load basic classes """
 			manage = ManageData(path='../teams')
 			if query_type == COMPLEX_QUERY:
@@ -1014,7 +1016,7 @@ class Finder:
 					self.data.use = teams
 					self.resultdata = self.calculation.get().data
 					self.useddata = teams
-					self.findclass = self.resultdata
+					self.preresult = self.resultdata
 				elif data in self._teamsName:
 					""" TODO: Implement it """
 					pass
@@ -1033,10 +1035,10 @@ class Finder:
 			"""
 				Inner call
 			"""
-			self.resultdata = findclass
+			self.resultdata = preresult
 			#Used data in this session(player data, match data)
 			self.useddata = kwargs.get('useddata')
-			self.findclass = findclass
+			self.preresult = preresult
 			self.data = self.useddata
 
 		#self._findData(data)
@@ -1086,7 +1088,7 @@ class Finder:
 				return afunc(matches.data, value)
 				#return self._asyncCall(afunc, params=(matches.data,value, )).get()
 		else:
-			print("WHEN CALCULATION IS ZERO", self.findclass)
+			print("WHEN CALCULATION IS ZERO", self.preresult)
 
 	def get(self, data):
 		pass
@@ -1104,13 +1106,14 @@ class Finder:
 		""" Template for greather, less, ident and for others
 			with predicate
 		"""
+		print("IM: ", type(param), pred)
 		issort = kwargs.get('sort')
 		paramvalue = self.query(pred)
 		if issort:
 			paramvalue = self._toSort(paramvalue)
 		if self.data.use == None:
 			raise Exception("Something went wrong. ")
-		return Finder(param, findclass=paramvalue, useddata=self.data.use)
+		return Finder(param, preresult=paramvalue, useddata=self.data.use, queries=self.queries)
 
 
 	def _toSort(self, paramvalue):
@@ -1132,11 +1135,17 @@ class Finder:
 			For example: 
 				Finder('Goals')
 					.greater(10)
-					.view(LASTNAME)
+					.viewBy(LASTNAME)
 			Return pairs (goals, LastName) with greater than 10
+
+				Finder('Goals')
+					.greater(10)
+					.viewBy('yellow cards')
+					.viewBy(LASTNAME)
+				Return list of [goals, yellow cards, LastName]
 		"""
 		#Now in player case
-		findlastname = lambda name: list(filter(lambda x: name in x, self.findclass))
+		findlastname = lambda name: list(filter(lambda x: name in x, self.preresult))
 		result = []
 		dictresult =[]
 		for team in self.useddata.keys():
@@ -1152,16 +1161,22 @@ class Finder:
 						result.append(res)
 						dictresult.append(dictdata)
 		if len(result) == 0:
-			result = findclass
-		return Finder(value, findclass=result, useddata=self.useddata)
+			result = preresult
+		self.queries.append(value)
+		return Finder(value, preresult=result, useddata=self.useddata, queries=self.queries)
 
-	def show(self):
-		""" Output results """
-		return self.resultdata
+	def show(self, by=None):
+		""" Output results 
+			by - return only target column
+		"""
+		if by == None:
+			return self.resultdata
+		idx = self.queries.index(by)
+		return list(map(lambda x: x[idx], self.resultdata))
 
 	def between(self, startmin, endmin):
 		print(self.lga)
-		return Finder(startmin, findclass=self.resultdata)
+		return Finder(startmin, preresult=self.resultdata)
 
 
 class CollectMatches:
