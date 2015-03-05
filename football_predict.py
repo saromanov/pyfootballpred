@@ -974,6 +974,9 @@ class QueryData(object):
 COMPLEX_QUERY = 'ComplexQuery'
 SIMPLE_QUERY = 'SimpleQuery'
 
+PLAYER_EVENT = 'playerevent'
+GAME_EVENT = 'gameevent'
+
 class Finder:
 	""" Find games with natural language
 		Fox example "interesting game" or "game with many yellow cards"
@@ -1017,6 +1020,7 @@ class Finder:
 					self.resultdata = self.calculation.get().data
 					self.useddata = teams
 					self.preresult = self.resultdata
+					self.typeevent = PLAYER_EVENT
 				elif data in self._teamsName:
 					""" TODO: Implement it """
 					pass
@@ -1027,7 +1031,12 @@ class Finder:
 					self.calculation = self._asyncCall(self.data.matches.getEvents, \
 					params=(data,))
 					self.resultdata = self.calculation.get()
+					self.preresult = self.resultdata
 					self.useddata = teams
+					self.typeevent = GAME_EVENT
+					print("This is game event: ")
+				else:
+					raise Exception("This query not contain in any db")
 
 			'''self.calculation = self._asyncCall(self.data.matches.getEvents, \
 				params=('miss',))'''
@@ -1040,6 +1049,7 @@ class Finder:
 			self.useddata = kwargs.get('useddata')
 			self.preresult = preresult
 			self.data = self.useddata
+			self.typeevent = kwargs.get('typeevent')
 
 		#self._findData(data)
 
@@ -1145,25 +1155,16 @@ class Finder:
 				Return list of [goals, yellow cards, LastName]
 		"""
 		#Now in player case
-		findlastname = lambda name: list(filter(lambda x: name in x, self.preresult))
 		result = []
-		dictresult =[]
-		for team in self.useddata.keys():
-			for player in self.useddata[team]:
-				target = findlastname(player[LASTNAME])
-				if len(target) > 0:
-					res = list(target[0])
-					if value in player:
-						dictdata = {}
-						dictdata[value] = player[value]
-						dictdata['lastname'] = player[LASTNAME]
-						res.append(player[value])
-						result.append(res)
-						dictresult.append(dictdata)
-		if len(result) == 0:
-			result = preresult
+		vbhelp = ViewByHelpful(self.preresult, self.useddata, value)
+		if self.typeevent == PLAYER_EVENT:
+			result = vbhelp.runPlayer()
+		if self.typeevent == GAME_EVENT:
+			result = vbhelp.runGame()
+		if result != None and len(result) == 0:
+			result = self.preresult
 		self.queries.append(value)
-		return Finder(value, preresult=result, useddata=self.useddata, queries=self.queries)
+		return Finder(value, preresult=result, useddata=self.useddata, queries=self.queries, typeevent=PLAYER_EVENT)
 
 	def show(self, by=None):
 		""" Output results 
@@ -1178,6 +1179,44 @@ class Finder:
 		print(self.lga)
 		return Finder(startmin, preresult=self.resultdata)
 
+
+class ViewByHelpful:
+	def __init__(self, preresult, useddata, value):
+		self.preresult = preresult
+		self.useddata = useddata
+		self.value = value
+
+	def ifParamsNotEmpty(self):
+		''' Before run, check if preresult and other params is not empty.
+			This is checkk need to raise user exception. Of course, before 
+			running run, this function call also.
+		'''
+		params = [self.preresult, self.useddata, self.value]
+		if not all(params):
+			raise Exception("Some of params, contain empty element")
+
+	def runPlayer(self):
+		self.ifParamsNotEmpty()
+		findlastname = lambda name: list(filter(lambda x: name in x, self.preresult))
+		result = []
+		dictresult =[]
+		value = self.value
+		for team in self.useddata.keys():
+			for player in self.useddata[team]:
+				target = findlastname(player[LASTNAME])
+				if len(target) > 0:
+					res = list(target[0])
+					if value in player:
+						dictdata = {}
+						dictdata[value] = player[value]
+						dictdata['lastname'] = player[LASTNAME]
+						res.append(player[value])
+						result.append(res)
+						dictresult.append(dictdata)
+		return result 
+
+	def runGame(self, gameobj):
+		print("This is preresult: ", self.preresult, self.value)
 
 class CollectMatches:
 	""" Collect all matches from web"""
