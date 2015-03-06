@@ -857,6 +857,7 @@ class LiveGameAnalysis:
 			target = self.data[dat]
 			if len(target) > 0: 
 				teams = self.data[dat][1][0]
+				print(prepared[0], prepared[1])
 				if teams[0] == prepared[0] and teams[1] == prepared[1]:
 					return self.data[dat]
 
@@ -896,6 +897,10 @@ class LiveGameAnalysis:
 				count_events = len(list(filter(lambda x: x[1] == event, evt[0])))
 				yield(evt[1], count_events)
 
+	def findGame(self, title):
+		""" Another implementation of finding name by title"""
+		return self._findGameByTitle(title)
+
 	def _getEventsInner(self, eventname, data=None):
 		'''
 			Return all events (for example "goal") from all games
@@ -928,7 +933,7 @@ class LiveGameAnalysis:
 			After prepare data - run mainLoop over all games
 		'''
 		for ds in data:
-			yield self._innerFilter(func, ds[0])
+			yield ds[1], self._innerFilter(func, ds[0])
 
 	def _innerFilter(self, func, elements):
 		""" 
@@ -1160,7 +1165,7 @@ class Finder:
 		if self.typeevent == PLAYER_EVENT:
 			result = vbhelp.runPlayer()
 		if self.typeevent == GAME_EVENT:
-			result = vbhelp.runGame()
+			result = vbhelp.runGame(self.preresult)
 		if result != None and len(result) == 0:
 			result = self.preresult
 		self.queries.append(value)
@@ -1216,7 +1221,8 @@ class ViewByHelpful:
 		return result 
 
 	def runGame(self, gameobj):
-		print("This is preresult: ", self.preresult, self.value)
+		pass
+		#print("This is preresult: ", self.preresult, self.value)
 
 class CollectMatches:
 	""" Collect all matches from web"""

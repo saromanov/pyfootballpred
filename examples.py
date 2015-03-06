@@ -8,12 +8,15 @@ def finder1():
 							.viewBy('goals')\
 							.viewBy('yellow')\
 							.show()
-
+	print(fnd)
 
 def finder2():
-	fnd = Finder('dribbles').greater(50)\
-							.viewBy('goals')\
+	""" Get dribbles equal 5"""
+	fnd = Finder('dribbles').ident(5)\
+							.viewBy('red')\
+							.viewBy('yellow')\
 							.show()
+	print("Result: ", fnd)
 def finder3():
 	""" Example with team param """
 
@@ -26,7 +29,17 @@ def finder4():
 	print(fnd)
 
 def finder5():
-	fnd = Finder('goal').between(5,10)
+	"Find game, where goal, red card and yellow card"
+	fnd = Finder('goal').\
+						viewBy('red card').\
+						viewBy('goal')\
+						.show()
+	print(fnd)
+
+def finder_game_event1():
+	fnd = Finder('goal').\
+						viewBy('minutes')
+
 
 
 #Statistics examples
@@ -58,5 +71,12 @@ def textgame3():
 	print(list(fun1.getEvents('goal')))
 def textgame4():
 	fun1 = LiveGameAnalysis(data='./matches')
-	print(list(fun1.getEventsByTime(1, 5)))
+	print(list(fun1.getEventsByTime(1, 10)))
+def textgame5():
+	fun1 = LiveGameAnalysis(data='./matches')
+	fun1.findGame('Arsenal - Manchester City')
+
+#finder_game_event1()
+#finder5()
+textgame5()
 
