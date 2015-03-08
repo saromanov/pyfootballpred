@@ -852,13 +852,14 @@ class LiveGameAnalysis:
 			TODO: Fix search
 		"""
 		prepared = title.split('-')
+		firstteam = prepared[0][:-1]
+		secondteam = prepared[1][1:]
 		#Pretty bad solution
 		for dat in self.data:
 			target = self.data[dat]
-			if len(target) > 0: 
+			if len(target) > 0:
 				teams = self.data[dat][1][0]
-				print(prepared[0], prepared[1])
-				if teams[0] == prepared[0] and teams[1] == prepared[1]:
+				if firstteam == teams[0] and secondteam == teams[1]:
 					return self.data[dat]
 
 	def similarGames(self, title, startmin, endmin):
@@ -898,7 +899,10 @@ class LiveGameAnalysis:
 				yield(evt[1], count_events)
 
 	def findGame(self, title):
-		""" Another implementation of finding name by title"""
+		""" Another implementation of finding name by title
+			On the input string representation of game
+			For example Manchester United - Arsenal
+		"""
 		return self._findGameByTitle(title)
 
 	def _getEventsInner(self, eventname, data=None):
