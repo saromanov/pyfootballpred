@@ -953,6 +953,24 @@ class LiveGameAnalysis:
 		tempkeys = list(self.data.keys())
 		return set(map(lambda x: x[1], self.data[tempkeys[0]][0]))
 
+	def getGameWithMostFreqEvents(self):
+		""" Return (number of events, game with the largets number of events)
+			For example:
+			Game 1:
+			1 min - Cornor
+			5 min - Yellow card
+			85 min - Goal
+			Game 2
+			1 min - Cornor
+			2 min - Goal
+			3 min - Goal
+			4 min - Goal
+
+			Return Game 2
+		"""
+		return max(((len(title), title) for i, title in enumerate(self.data)), key=lambda x: x[0])
+
+
 
 class MatchesData:
 	""" Object class for matches """
@@ -975,9 +993,10 @@ class FinderHelpful:
 
 class QueryData(object):
 	"""Set information for each query"""
-	def __init__(self, arg):
+	def __init__(self, arg, *args, **kwargs):
 		super(QueryData, self).__init__()
-		self.arg = arg
+		self.lastquery = kwargs.get('lastquery', None)
+
 		
 
 COMPLEX_QUERY = 'ComplexQuery'
@@ -1007,16 +1026,16 @@ class Finder:
 		preresult = kwargs.get('preresult')
 		#All queries durning session
 		self.queries = kwargs.get('queries', [data, 'lastname'])
+		manage = ManageData(path='../teams')
+		self._playerParams = manage.getAllParamPlayers()
+		self._teamsName = manage.getAllTeams()
 		if preresult == None:
 			""" Load basic classes """
-			manage = ManageData(path='../teams')
 			if query_type == COMPLEX_QUERY:
 				""" Case for COMPLEX QUERY """
 				self._complexQuery(data)
 			else:
 				data = self._prepareQuery(data)
-				self._playerParams = manage.getAllParamPlayers()
-				self._teamsName = manage.getAllTeams()
 				teams = manage.data
 				lga = LiveGameAnalysis(data='./matches')
 				self.lga = lga
@@ -1179,6 +1198,7 @@ class Finder:
 		""" Output results 
 			by - return only target column
 		"""
+		print(self._playerParams, ...)
 		if by == None:
 			return self.resultdata
 		idx = self.queries.index(by)
