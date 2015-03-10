@@ -206,6 +206,8 @@ class ManageData:
 	def getDataFromTeams(self, param, team):
 		""" Return some param from all players, from all teams 
 			One of the main func for Finder
+
+			TODO: Need to append find by list of teams
 		"""
 		data = self.data
 		if team != None:
@@ -573,35 +575,31 @@ class Statistics:
 
 	def compareTeams(self, team1, team2):
 		'''
-			Compare players by pos with two teams
-			TODO: Implement it
+			Compare players by total number of params
+			For example:
+			Total number of goals or total number of yellow cards
 		'''
 		if team1 not in self.teamdata or team2 not in self.teamdata:
 			raise StatisticsException("On of teams not in the base")
 
 		result = {}
 		poses = set(map(lambda x: x['positionshort'], self.teamdata[team1]))
-		for pos in poses:
-			players1 = list(getPlayersFromTeamByPos(self.teamdata, team1, pos))
-			players2 = list(getPlayersFromTeamByPos(self.teamdata, team2, pos))
-			q = Queue()
-			q.put(players1)
-			q.put(players2)
-			p = Process(target=self._compareByPos, args=(q, ))
-			p.start()
-			p.join()
-			result = q.get()
-			print(result, ...)
-		return result
+		players1 = self.teamdata[team1]
+		players2 = self.teamdata[team2]
+		params = players1[0].keys()
+		print("{0} vs {1}".format(team1, team2))
+		for param in params:
+			result_team1, result_team2 = self._accumulatePlayerParams(param, players1, players2)
+			if result_team1 != None:
+				print("{0} : {1} vs {2}".format(param, result_team1, result_team2))
 
-	def _compareByPos(self, q):
-		players2 = q.get()
-		players1 = q.get()
-		for p1 in players1:
-			for p2 in players2:
-				print(p1['yellow'])
-		q.put(1)
 
+	def _accumulatePlayerParams(self, param, players1, players2):
+		''' Sum over all player params '''
+		if isinstance(players1[0][param], int):
+			compute = lambda player: sum(list(map(lambda x: x[param], player)))
+			return compute(players1), compute(players2)
+		return None,None
 
 	def _checkTeam(self, team):
 		if team not in self.teamdata:
