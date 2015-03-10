@@ -203,13 +203,24 @@ class ManageData:
 		""" After load of team data, return all params with each player """
 		return list(self.data['chelsea'][0].keys())
 
-	def getDataFromTeams(self, param):
-		""" Return some param from all players, from all teams """
+	def getDataFromTeams(self, param, team):
+		""" Return some param from all players, from all teams 
+			One of the main func for Finder
+		"""
 		data = self.data
+		if team != None:
+			team = team.lower()
 		result = []
-		for team in data:
-			for player in data[team]:
-				result.append((player[param], player[LASTNAME]))
+		def getPlayer(player):
+			return player[param], player[LASTNAME]
+		def appendPlayers(team):
+			result.extend(list(map(getPlayer, data[team])))
+		if team != None and team in self.data:
+			#data = self.data[team]
+			appendPlayers(team)
+			return PlayerData(result)
+		for lteam in data:
+			appendPlayers(lteam)
 		return PlayerData(result)
 
 
@@ -1027,7 +1038,9 @@ class Finder:
 		#All queries durning session
 		self.queries = kwargs.get('queries', [data, 'lastname'])
 		manage = ManageData(path='../teams')
+		#Types for finding params on players
 		self._playerParams = manage.getAllParamPlayers()
+		#Types for finding params on teams
 		self._teamsName = manage.getAllTeams()
 		if preresult == None:
 			""" Load basic classes """
@@ -1042,8 +1055,9 @@ class Finder:
 				self._gameevents = lga.getAllEventsName()
 				self.data = FinderHelpful(manage, lga)
 				if data in self._playerParams:
+					team = kwargs.get('team', None)
 					self.calculation = self._asyncCall(self.data.teams.getDataFromTeams, \
-						params=(data,))
+						params=(data,team,))
 					self.data.use = teams
 					self.resultdata = self.calculation.get().data
 					self.useddata = teams
@@ -1144,7 +1158,6 @@ class Finder:
 		""" Template for greather, less, ident and for others
 			with predicate
 		"""
-		print("IM: ", type(param), pred)
 		issort = kwargs.get('sort')
 		paramvalue = self.query(pred)
 		if issort:
@@ -1198,7 +1211,6 @@ class Finder:
 		""" Output results 
 			by - return only target column
 		"""
-		print(self._playerParams, ...)
 		if by == None:
 			return self.resultdata
 		idx = self.queries.index(by)
