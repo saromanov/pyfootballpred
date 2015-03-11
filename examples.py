@@ -7,6 +7,7 @@ def finder1():
 	fnd = Finder('dribbles').greater(10, sort=True)\
 							.viewBy('goals')\
 							.viewBy('yellow')\
+							.viewBy('red')\
 							.show()
 	print(fnd)
 
@@ -31,14 +32,19 @@ def finder4():
 def finder5():
 	"Find game, where goal, red card and yellow card"
 	fnd = Finder('goal').\
-						viewBy('red card').\
-						viewBy('goal')\
+						viewBy('red card')\
+						.viewBy('goals')\
 						.show()
+
+def finder6():
+	""" Future. Сделать переход от игрока к матчу"""
+	fnd = Finder('goals', team='aston Villa').greater(7).show()
 	print(fnd)
 
 def finder_game_event1():
 	fnd = Finder('goal').\
 						viewBy('minutes')
+
 
 
 
@@ -74,9 +80,9 @@ def textgame4():
 	print(list(fun1.getEventsByTime(1, 10)))
 def textgame5():
 	fun1 = LiveGameAnalysis(data='./matches')
-	fun1.findGame('Arsenal - Manchester City')
+	print("This is result: ", fun1.findGame('Arsenal - Manchester City'))
 
-#finder_game_event1()
-#finder5()
-textgame5()
+def freqevents1():
+	fun1 = LiveGameAnalysis(data='./matches')
+	print(fun1.getGameWithMostFreqEvents())
 
